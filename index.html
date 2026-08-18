@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Controle de Cargas</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+</head>
+
+<body>
+
+    <header class="cabecalho">
+
+        <div>
+            <h1>Controle de Cargas</h1>
+            <p>Acompanhamento operacional de carregamentos</p>
+        </div>
+
+        <div
+            class="data-atual"
+            id="data-atual"
+        >
+        </div>
+
+    </header>
+
+
+    <main class="container">
+
+        <!-- ====================================== -->
+        <!-- KPIs -->
+        <!-- ====================================== -->
+
+        <section class="indicadores">
+
+            <div class="card">
+                <span>Total de Cargas</span>
+                <strong id="total-cargas">0</strong>
+            </div>
+
+            <div class="card card-carregado">
+                <span>Carregadas</span>
+                <strong id="total-carregadas">0</strong>
+            </div>
+
+            <div class="card card-prazo">
+                <span>Dentro do Prazo</span>
+                <strong id="total-prazo">0</strong>
+            </div>
+
+            <div class="card card-atrasado">
+                <span>Atrasadas</span>
+                <strong id="total-atrasadas">0</strong>
+            </div>
+
+            <div class="card">
+                <span>Peso Total</span>
+                <strong id="peso-total">0 kg</strong>
+            </div>
+
+            <div class="card">
+                <span>Venda Total</span>
+                <strong id="venda-total">R$ 0,00</strong>
+            </div>
+
+        </section>
+
+
+        <!-- ====================================== -->
+        <!-- FILTROS -->
+        <!-- ====================================== -->
+
+        <section class="filtros">
+
+            <input
+                type="text"
+                id="pesquisa-oc"
+                placeholder="Pesquisar OC"
+            >
+
+            <select id="filtro-transportadora">
+
+                <option value="">
+                    Todas as transportadoras
+                </option>
+
+            </select>
+
+
+            <select id="filtro-status">
+
+                <option value="">
+                    Todos os status
+                </option>
+
+                <option value="CARREGADO">
+                    Carregado
+                </option>
+
+                <option value="DENTRO DO PRAZO">
+                    Dentro do prazo
+                </option>
+
+                <option value="ATRASADO">
+                    Atrasado
+                </option>
+
+            </select>
+
+
+            <input
+                type="date"
+                id="filtro-data"
+            >
+
+
+            <input
+                type="file"
+                id="arquivo-excel"
+                accept=".xlsx"
+            >
+
+
+            <button id="btn-importar">
+                Importar / Atualizar Planilha
+            </button>
+
+        </section>
+
+
+        <!-- ====================================== -->
+        <!-- GRÁFICOS -->
+        <!-- ====================================== -->
+
+        <section class="graficos">
+
+            <div class="grafico-card">
+
+                <div class="titulo-grafico">
+
+                    <div>
+                        <h3>Status das Cargas</h3>
+                        <p>Distribuição das cargas por situação</p>
+                    </div>
+
+                </div>
+
+                <div class="grafico-area">
+                    <canvas id="grafico-status"></canvas>
+                </div>
+
+            </div>
+
+
+            <div class="grafico-card">
+
+                <div class="titulo-grafico">
+
+                    <div>
+                        <h3>Cargas por Transportadora</h3>
+                        <p>Quantidade de cargas por operação</p>
+                    </div>
+
+                </div>
+
+                <div class="grafico-area">
+                    <canvas id="grafico-transportadora"></canvas>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ====================================== -->
+        <!-- TABELA -->
+        <!-- ====================================== -->
+
+        <section class="tabela-container">
+
+            <div class="tabela-titulo">
+
+                <div>
+                    <h3>Lista de Cargas</h3>
+                    <p>Clique em uma carga para visualizar os detalhes</p>
+                </div>
+
+            </div>
+
+
+            <div class="tabela-scroll">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+                            <th>OC</th>
+                            <th>Rota</th>
+                            <th>Transportadora</th>
+                            <th>Status</th>
+                            <th>GR</th>
+                            <th>Venda</th>
+                            <th>Doca</th>
+                            <th>Peso</th>
+                            <th>Data</th>
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="tabela-cargas">
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- ====================================== -->
+    <!-- MODAL -->
+    <!-- ====================================== -->
+
+    <div
+        id="modal-detalhes"
+        class="modal"
+    >
+
+        <div class="modal-conteudo">
+
+            <div class="modal-topo">
+
+                <div>
+
+                    <h2>Detalhes da Carga</h2>
+
+                    <p>
+                        OC:
+                        <strong id="modal-oc"></strong>
+                    </p>
+
+                </div>
+
+
+                <button
+                    id="btn-fechar-modal"
+                    class="btn-fechar"
+                    type="button"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <div class="detalhes-grid">
+
+                <div class="campo-detalhe">
+
+                    <label>Rota</label>
+
+                    <input
+                        type="text"
+                        id="modal-rota"
+                        disabled
+                    >
+
+                </div>
+
+
+                <div class="campo-detalhe">
+
+                    <label>Transportadora</label>
+
+                    <input
+                        type="text"
+                        id="modal-transportadora"
+                        disabled
+                    >
+
+                </div>
+
+
+                <div class="campo-detalhe">
+
+                    <label>Status</label>
+
+                    <select id="modal-status">
+
+                        <option value="CARREGADO">
+                            Carregado
+                        </option>
+
+                        <option value="DENTRO DO PRAZO">
+                            Dentro do prazo
+                        </option>
+
+                        <option value="ATRASADO">
+                            Atrasado
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="campo-detalhe">
+
+                    <label>Doca</label>
+
+                    <input
+                        type="number"
+                        id="modal-doca"
+                    >
+
+                </div>
+
+
+                <div class="campo-detalhe">
+
+                    <label>GR</label>
+
+                    <input
+                        type="text"
+                        id="modal-gr"
+                        disabled
+                    >
+
+                </div>
+
+
+                <div class="campo-detalhe">
+
+                    <label>Data</label>
+
+                    <input
+                        type="text"
+                        id="modal-data"
+                        disabled
+                    >
+
+                </div>
+
+
+                <div class="campo-detalhe">
+
+                    <label>Peso</label>
+
+                    <input
+                        type="text"
+                        id="modal-peso"
+                        disabled
+                    >
+
+                </div>
+
+
+                <div class="campo-detalhe">
+
+                    <label>Venda</label>
+
+                    <input
+                        type="text"
+                        id="modal-venda"
+                        disabled
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="campo-observacao">
+
+                <label>Observação</label>
+
+                <textarea
+                    id="modal-observacao"
+                    placeholder="Digite uma observação sobre esta carga..."
+                ></textarea>
+
+            </div>
+
+
+            <!-- HISTÓRICO -->
+
+            <div class="historico-container">
+
+                <div class="historico-titulo">
+
+                    <h3>Histórico da OC</h3>
+
+                    <span id="historico-quantidade">
+                        0 alterações
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="lista-historico"
+                    class="lista-historico"
+                >
+
+                    <div class="historico-vazio">
+                        Nenhuma alteração registrada.
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-acoes">
+
+                <button
+                    id="btn-cancelar"
+                    class="btn-secundario"
+                    type="button"
+                >
+                    Cancelar
+                </button>
+
+
+                <button
+                    id="btn-salvar"
+                    class="btn-salvar"
+                    type="button"
+                >
+                    Salvar Alterações
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- EXCEL -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js">
+    </script>
+
+
+    <!-- GRÁFICOS -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/chart.js">
+    </script>
+
+
+    <!-- NOSSO JAVASCRIPT -->
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
