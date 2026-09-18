@@ -1,125 +1,190 @@
-# 📦 Controle de Cargas
+# 🚚 Controle de Cargas
 
-Dashboard web desenvolvido para acompanhamento e controle operacional de cargas.
+Dashboard web para **acompanhamento operacional de cargas**, desenvolvido com HTML, CSS e JavaScript a partir de um cenário prático de logística.
 
-O projeto foi criado como um protótipo de uma solução para centralizar informações de carregamento, permitindo acompanhar indicadores, status das cargas, transportadoras e dados operacionais de forma visual e interativa.
+A aplicação transforma dados de uma planilha Excel em informações visuais para facilitar o acompanhamento da operação, reunindo **KPIs, filtros, gráficos, status, detalhes das cargas e histórico de alterações** em uma única interface.
 
-> ⚠️ Todos os dados utilizados neste projeto são fictícios e foram criados exclusivamente para fins de demonstração e portfólio.
+> ⚠️ Todos os dados utilizados no projeto são fictícios e destinados exclusivamente a estudo, demonstração técnica e portfólio.
 
----
+## 🎯 Objetivo
 
-## 📊 Sobre o projeto
+O projeto foi criado para explorar como uma rotina operacional baseada em planilhas pode evoluir para uma interface mais visual e interativa.
 
-O Controle de Cargas transforma dados provenientes de uma planilha Excel em um dashboard operacional interativo.
+A proposta é centralizar informações de carregamento e permitir uma leitura rápida da operação, mantendo a planilha como fonte de dados nesta versão e deixando o projeto preparado conceitualmente para uma futura integração com banco de dados, API ou ERP.
 
-A aplicação permite importar uma planilha e automaticamente atualizar indicadores, gráficos e a tabela de cargas.
+## ✨ Funcionalidades
 
-O projeto foi desenvolvido pensando em uma possível evolução para integração com sistemas ERP.
+- Importação de arquivos `.xlsx`
+- Leitura dos dados com ExcelJS
+- Identificação automática do status pela cor da célula da planilha
+- Pesquisa por OC
+- Filtro por transportadora
+- Filtro por status
+- Filtro por data
+- KPIs atualizados a partir dos dados carregados
+- Gráfico de distribuição por status
+- Gráfico de cargas por transportadora
+- Tabela operacional de cargas
+- Visualização detalhada de cada OC
+- Alteração manual de status
+- Alteração de doca
+- Registro de observações
+- Histórico de alterações por OC
+- Persistência local das cargas e alterações no navegador
+- Atualização da planilha sem perder alterações manuais já registradas
 
----
+## 📊 Indicadores
 
-## 🚀 Funcionalidades
+O painel apresenta:
 
-- 📥 Importação de planilhas Excel
-- 🔄 Atualização dos dados sem recarregar a aplicação
-- 💾 Persistência dos dados no navegador
-- 🔎 Pesquisa por OC
-- 🚚 Filtro por transportadora
-- 📅 Filtro por data
-- 🟢 Filtro por status
-- 📊 Indicadores operacionais (KPIs)
-- 🍩 Gráfico de status das cargas
-- 📈 Gráfico de cargas por transportadora
-- 🟢 Identificação de cargas carregadas
-- 🟡 Identificação de cargas dentro do prazo
-- 🔴 Identificação de cargas atrasadas
-- 📝 Tela de detalhes da carga
-- ✏️ Alteração de status, doca e observações
-- 🕒 Histórico de alterações por OC
+- **Total de cargas**
+- **Cargas carregadas**
+- **Cargas dentro do prazo**
+- **Cargas atrasadas**
+- **Peso total**
+- **Valor total das vendas**
 
----
+## 🚦 Regras visuais de status
 
-## 📌 Indicadores
+O sistema interpreta as cores da planilha e converte cada carga para um status operacional:
 
-O dashboard apresenta os seguintes indicadores:
+| Cor na planilha | Status |
+| --- | --- |
+| 🟢 Verde | Carregado |
+| 🟡 Amarelo | Dentro do prazo |
+| 🔴 Vermelho | Atrasado |
 
-- Total de cargas
-- Cargas carregadas
-- Cargas dentro do prazo
-- Cargas atrasadas
-- Peso total
-- Valor total das vendas
+Essa regra transforma uma sinalização visual existente na planilha em informação estruturada para filtros, indicadores e gráficos.
 
----
+## 🧠 Fluxo da aplicação
 
-## 🎨 Status das cargas
+```text
+Planilha Excel (.xlsx)
+        ↓
+      ExcelJS
+        ↓
+Leitura e tratamento dos dados
+        ↓
+     JavaScript
+        ↓
+ ┌──────┼──────────┐
+ ↓      ↓          ↓
+KPIs  Gráficos   Tabela
+                   ↓
+          Detalhes da carga
+                   ↓
+       Alterações + Histórico
+                   ↓
+             LocalStorage
+```
 
-| Status | Identificação |
-|---|---|
-| 🟢 Carregado | Carga já carregada |
-| 🟡 Dentro do prazo | Carga dentro do prazo operacional |
-| 🔴 Atrasado | Carga com carregamento atrasado |
+## 🛠️ Tecnologias
 
----
+- **HTML5** — estrutura da aplicação
+- **CSS3** — layout e identidade visual
+- **JavaScript** — regras, filtros, indicadores e interações
+- **ExcelJS** — leitura da planilha Excel
+- **Chart.js** — geração dos gráficos
+- **LocalStorage** — persistência local no navegador
+- **Git / GitHub** — versionamento
 
-## 🛠️ Tecnologias utilizadas
-
-- HTML5
-- CSS3
-- JavaScript
-- Chart.js
-- ExcelJS
-- LocalStorage
-- Git
-- GitHub
-- Visual Studio Code
-
----
-
-## 📂 Estrutura do projeto
+## 📂 Estrutura
 
 ```text
 Controle-de-Cargas/
-│
 ├── index.html
 ├── style.css
 ├── script.js
 └── README.md
+```
 
+### `index.html`
 
-Planilha Excel
-      ↓
-    ExcelJS
-      ↓
-Tratamento dos dados
-      ↓
-   JavaScript
-      ↓
- ┌────┴────┐
- ↓         ↓
-KPIs    Gráficos
- ↓         ↓
- └────┬────┘
-      ↓
-Tabela de Cargas
-      ↓
-Detalhes / Histórico
+Estrutura os KPIs, filtros, gráficos, tabela de cargas e modal de detalhes.
 
-O objetivo deste projeto é demonstrar a criação de uma solução web para acompanhamento operacional de cargas, transformando dados de uma planilha em informações visuais que facilitam o acompanhamento da operação.
+### `script.js`
 
-Algumas melhorias planejadas para o projeto:
+Concentra a leitura da planilha, tratamento dos dados, filtros, gráficos, persistência, histórico e regras de negócio da interface.
 
-Integração com banco de dados
-Integração com ERP
-Autenticação de usuários
-Controle de permissões
-Registro de usuário responsável pelas alterações
-API para atualização automática dos dados
-Relatórios operacionais
-Dashboard histórico
-Indicadores de produtividade
+### `style.css`
 
+Define o layout responsivo, cores, cards, tabela, modal e estilos dos diferentes status.
 
-Projeto feito por:
-Marcos Philipe
-Projeto desenvolvido para fins de estudo, demonstração técnica e portfólio
+## ▶️ Como executar
+
+Este é um projeto front-end e não exige instalação de dependências locais.
+
+Clone o repositório:
+
+```bash
+git clone https://github.com/MarcosPhilipe2/Controle-de-Cargas.git
+cd Controle-de-Cargas
+```
+
+Depois, abra o arquivo `index.html` no navegador.
+
+Para utilizar o dashboard com dados, importe uma planilha `.xlsx` compatível com a estrutura esperada pelo projeto.
+
+As bibliotecas ExcelJS e Chart.js são carregadas via CDN, portanto é necessário acesso à internet para utilizá-las dessa forma.
+
+## 💾 Persistência
+
+O projeto utiliza o `localStorage` do navegador para manter:
+
+- base de cargas importada;
+- alterações manuais;
+- histórico por OC.
+
+Isso permite atualizar a página sem precisar importar novamente a planilha em todas as utilizações no mesmo navegador.
+
+> O `localStorage` é adequado para este protótipo, mas não substitui um banco de dados em uma aplicação multiusuário.
+
+## 🔄 Evolução do projeto
+
+Este projeto nasceu da ideia de transformar um acompanhamento operacional feito em planilha em uma aplicação mais visual.
+
+Uma evolução natural seria substituir o armazenamento local e a importação manual por uma arquitetura com:
+
+```text
+ERP / Sistema Operacional
+          ↓
+         API
+          ↓
+     Banco de Dados
+          ↓
+ Aplicação / Dashboard
+```
+
+## 🗺️ Próximas evoluções
+
+- Banco de dados centralizado
+- API para atualização automática
+- Integração com ERP
+- Autenticação de usuários
+- Perfis e permissões
+- Identificação do usuário responsável por cada alteração
+- Indicadores históricos
+- Relatórios operacionais
+- Indicadores de produtividade
+
+## 💼 O que este projeto demonstra
+
+Este projeto combina conhecimentos de desenvolvimento web com experiência prática em logística.
+
+Entre os conceitos aplicados estão:
+
+- manipulação de dados;
+- leitura de arquivos Excel;
+- regras de negócio;
+- persistência no navegador;
+- filtros e busca;
+- construção de dashboards;
+- visualização de indicadores;
+- organização de informações operacionais;
+- versionamento com Git.
+
+## 👨‍💻 Autor
+
+**Marcos Philipe Tavares**
+
+Projeto desenvolvido como parte do meu portfólio em Tecnologia, Dados e Automação, aplicando desenvolvimento web a um cenário de operação logística.
