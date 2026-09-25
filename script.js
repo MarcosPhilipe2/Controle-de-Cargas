@@ -1,2251 +1,1163 @@
 // ======================================================
-// CONTROLE DE CARGAS
+// CONTROLE DE CARGAS — INTERFACE
+// ------------------------------------------------------
+// As regras de negócio (conversões, status, filtros,
+// mesclagem da importação) ficam em utils.js.
+// ======================================================
+
+// ======================================================
+// ESTADO
 // ======================================================
 
 let cargas = [];
 
 let cargaSelecionada = null;
 
+let elementoFocoAnterior = null;
 
-// GRÁFICOS
+const ordenacao = {
+    campo: null,
+    direcao: "asc",
+};
+
+let cargasFiltradas = [];
 
 let graficoStatus = null;
 
 let graficoTransportadora = null;
 
-
 // ======================================================
 // LOCALSTORAGE
 // ======================================================
 
-const CHAVE_ALTERACOES =
-    "controle_cargas_alteracoes";
+const CHAVE_ALTERACOES = "controle_cargas_alteracoes";
 
-const CHAVE_CARGAS =
-    "controle_cargas_base";
+const CHAVE_CARGAS = "controle_cargas_base";
 
-const CHAVE_HISTORICO =
-    "controle_cargas_historico";
+const CHAVE_HISTORICO = "controle_cargas_historico";
 
+function lerArmazenamento(chave, valorPadrao) {
+    try {
+        const dados = localStorage.getItem(chave);
 
-// ======================================================
-// ELEMENTOS PRINCIPAIS
-// ======================================================
+        return dados ? JSON.parse(dados) : valorPadrao;
+    } catch (erro) {
+        console.error(`Erro ao ler "${chave}" do navegador:`, erro);
 
-const tabela =
-    document.getElementById(
-        "tabela-cargas"
-    );
+        return valorPadrao;
+    }
+}
 
+// setItem pode falhar (limite de espaço, navegação privada)
+function salvarArmazenamento(chave, valor) {
+    try {
+        localStorage.setItem(chave, JSON.stringify(valor));
 
-const campoPesquisa =
-    document.getElementById(
-        "pesquisa-oc"
-    );
+        return true;
+    } catch (erro) {
+        console.error(`Erro ao salvar "${chave}" no navegador:`, erro);
 
+        mostrarAviso(
+            "Não foi possível salvar os dados no navegador. " +
+                "Verifique o espaço disponível ou se está em uma janela anônima.",
+            "erro",
+        );
 
-const filtroTransportadora =
-    document.getElementById(
-        "filtro-transportadora"
-    );
+        return false;
+    }
+}
 
-
-const filtroStatus =
-    document.getElementById(
-        "filtro-status"
-    );
-
-
-const filtroData =
-    document.getElementById(
-        "filtro-data"
-    );
-
-
-const arquivoExcel =
-    document.getElementById(
-        "arquivo-excel"
-    );
-
-
-const btnImportar =
-    document.getElementById(
-        "btn-importar"
-    );
-
-
-const dataAtual =
-    document.getElementById(
-        "data-atual"
-    );
-
+function removerArmazenamento(chave) {
+    try {
+        localStorage.removeItem(chave);
+    } catch (erro) {
+        console.error(`Erro ao remover "${chave}" do navegador:`, erro);
+    }
+}
 
 // ======================================================
+// ELEMENTOS
+// ======================================================
+
+const $ = (id) => document.getElementById(id);
+
+const tabela = $("tabela-cargas");
+const tabelaContador = $("tabela-contador");
+
+const campoPesquisa = $("pesquisa-oc");
+const filtroTransportadora = $("filtro-transportadora");
+const filtroStatus = $("filtro-status");
+const filtroData = $("filtro-data");
+const btnLimparFiltros = $("btn-limpar-filtros");
+
+const arquivoExcel = $("arquivo-excel");
+const btnImportar = $("btn-importar");
+const btnExportar = $("btn-exportar");
+const btnLimparDados = $("btn-limpar-dados");
+
+const dataAtual = $("data-atual");
+const avisos = $("avisos");
+
 // KPIs
-// ======================================================
 
-const totalCargas =
-    document.getElementById(
-        "total-cargas"
-    );
+const totalCargas = $("total-cargas");
+const totalCarregadas = $("total-carregadas");
+const totalPrazo = $("total-prazo");
+const totalAtrasadas = $("total-atrasadas");
+const pesoTotal = $("peso-total");
+const vendaTotal = $("venda-total");
 
+// Modal
 
-const totalCarregadas =
-    document.getElementById(
-        "total-carregadas"
-    );
+const modal = $("modal-detalhes");
+const modalConteudo = modal.querySelector(".modal-conteudo");
+const modalOC = $("modal-oc");
+const modalRota = $("modal-rota");
+const modalTransportadora = $("modal-transportadora");
+const modalStatus = $("modal-status");
+const modalStatusOrigem = $("modal-status-origem");
+const modalDoca = $("modal-doca");
+const modalDocaOrigem = $("modal-doca-origem");
+const modalGR = $("modal-gr");
+const modalData = $("modal-data");
+const modalPeso = $("modal-peso");
+const modalVenda = $("modal-venda");
+const modalObservacao = $("modal-observacao");
 
+const btnFecharModal = $("btn-fechar-modal");
+const btnCancelar = $("btn-cancelar");
+const btnSalvar = $("btn-salvar");
+const btnRestaurar = $("btn-restaurar");
 
-const totalPrazo =
-    document.getElementById(
-        "total-prazo"
-    );
+// Histórico
 
-
-const totalAtrasadas =
-    document.getElementById(
-        "total-atrasadas"
-    );
-
-
-const pesoTotal =
-    document.getElementById(
-        "peso-total"
-    );
-
-
-const vendaTotal =
-    document.getElementById(
-        "venda-total"
-    );
-
+const listaHistorico = $("lista-historico");
+const historicoQuantidade = $("historico-quantidade");
 
 // ======================================================
-// MODAL
+// AVISOS (substituem os alert)
 // ======================================================
 
-const modal =
-    document.getElementById(
-        "modal-detalhes"
-    );
+function mostrarAviso(mensagem, tipo = "sucesso", duracao = 5000) {
+    const aviso = document.createElement("div");
 
+    aviso.className = `aviso aviso-${tipo}`;
+    aviso.setAttribute("role", tipo === "erro" ? "alert" : "status");
+    aviso.textContent = mensagem;
 
-const modalOC =
-    document.getElementById(
-        "modal-oc"
-    );
+    const btnFechar = document.createElement("button");
 
+    btnFechar.type = "button";
+    btnFechar.className = "aviso-fechar";
+    btnFechar.setAttribute("aria-label", "Fechar aviso");
+    btnFechar.textContent = "×";
+    btnFechar.addEventListener("click", () => aviso.remove());
 
-const modalRota =
-    document.getElementById(
-        "modal-rota"
-    );
+    aviso.appendChild(btnFechar);
+    avisos.appendChild(aviso);
 
-
-const modalTransportadora =
-    document.getElementById(
-        "modal-transportadora"
-    );
-
-
-const modalStatus =
-    document.getElementById(
-        "modal-status"
-    );
-
-
-const modalDoca =
-    document.getElementById(
-        "modal-doca"
-    );
-
-
-const modalGR =
-    document.getElementById(
-        "modal-gr"
-    );
-
-
-const modalData =
-    document.getElementById(
-        "modal-data"
-    );
-
-
-const modalPeso =
-    document.getElementById(
-        "modal-peso"
-    );
-
-
-const modalVenda =
-    document.getElementById(
-        "modal-venda"
-    );
-
-
-const modalObservacao =
-    document.getElementById(
-        "modal-observacao"
-    );
-
-
-const btnFecharModal =
-    document.getElementById(
-        "btn-fechar-modal"
-    );
-
-
-const btnCancelar =
-    document.getElementById(
-        "btn-cancelar"
-    );
-
-
-const btnSalvar =
-    document.getElementById(
-        "btn-salvar"
-    );
-
-
-// ======================================================
-// HISTÓRICO
-// ======================================================
-
-const listaHistorico =
-    document.getElementById(
-        "lista-historico"
-    );
-
-
-const historicoQuantidade =
-    document.getElementById(
-        "historico-quantidade"
-    );
-
+    if (duracao > 0) {
+        setTimeout(() => aviso.remove(), duracao);
+    }
+}
 
 // ======================================================
 // DATA ATUAL
 // ======================================================
 
 function mostrarDataAtual() {
-
-    const hoje =
-        new Date();
-
-
-    dataAtual.textContent =
-        hoje.toLocaleDateString(
-            "pt-BR"
-        );
-
+    dataAtual.textContent = new Date().toLocaleDateString("pt-BR");
 }
 
-
 // ======================================================
-// FORMATAÇÃO
-// ======================================================
-
-function formatarMoeda(valor) {
-
-    return Number(
-        valor || 0
-    ).toLocaleString(
-        "pt-BR",
-        {
-            style: "currency",
-            currency: "BRL"
-        }
-    );
-
-}
-
-
-function formatarPeso(valor) {
-
-    return Number(
-        valor || 0
-    ).toLocaleString(
-        "pt-BR",
-        {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }
-    ) + " kg";
-
-}
-
-
-function obterDataHoraAtual() {
-
-    return new Date()
-        .toLocaleString(
-            "pt-BR"
-        );
-
-}
-
-
-// ======================================================
-// DATA DA PLANILHA
-// ======================================================
-
-function converterData(valor) {
-
-    if (!valor) {
-
-        return "";
-
-    }
-
-
-    if (
-        valor instanceof Date
-    ) {
-
-        const dia =
-            String(
-                valor.getDate()
-            ).padStart(
-                2,
-                "0"
-            );
-
-
-        const mes =
-            String(
-                valor.getMonth() + 1
-            ).padStart(
-                2,
-                "0"
-            );
-
-
-        const ano =
-            valor.getFullYear();
-
-
-        return (
-            `${dia}/${mes}/${ano}`
-        );
-
-    }
-
-
-    return String(
-        valor
-    ).trim();
-
-}
-
-
-// ======================================================
-// SALVAR / CARREGAR BASE
+// BASE DE CARGAS
 // ======================================================
 
 function salvarCargasNoNavegador() {
-
-    localStorage.setItem(
-        CHAVE_CARGAS,
-        JSON.stringify(
-            cargas
-        )
-    );
-
+    return salvarArmazenamento(CHAVE_CARGAS, cargas);
 }
 
+function carregarAlteracoesSalvas() {
+    const alteracoes = lerArmazenamento(CHAVE_ALTERACOES, {});
+
+    return alteracoes && typeof alteracoes === "object" ? alteracoes : {};
+}
+
+// Ajusta bases salvas por versões anteriores do projeto
+// (OC/GR numéricos, doca numérica, sem valores da planilha).
+function migrarCarga(carga, alteracao) {
+    const migrada = {
+        ...carga,
+        oc: converterTexto(carga.oc),
+        rota: converterTexto(carga.rota),
+        transportadora: converterTexto(carga.transportadora),
+        status: carga.status || "",
+        gr: converterTexto(carga.gr),
+        venda: converterNumero(carga.venda),
+        doca: converterTexto(carga.doca),
+        peso: converterNumero(carga.peso),
+        data: converterTexto(carga.data),
+        observacao: carga.observacao || "",
+    };
+
+    // Sem alteração manual no campo: o valor atual é o da planilha
+    if (migrada.statusPlanilha === undefined && (!alteracao || alteracao.status === undefined)) {
+        migrada.statusPlanilha = migrada.status;
+    }
+
+    if (migrada.docaPlanilha === undefined && (!alteracao || alteracao.doca === undefined)) {
+        migrada.docaPlanilha = migrada.doca;
+    }
+
+    return migrada;
+}
 
 function carregarCargasDoNavegador() {
+    const dados = lerArmazenamento(CHAVE_CARGAS, null);
 
-    const dados =
-        localStorage.getItem(
-            CHAVE_CARGAS
-        );
-
-
-    if (!dados) {
-
+    if (!Array.isArray(dados)) {
         return false;
-
     }
 
+    const alteracoes = carregarAlteracoesSalvas();
 
-    try {
+    cargas = dados
+        .filter((carga) => carga && carga.oc !== undefined && carga.oc !== null && carga.oc !== "")
+        .map((carga) => {
+            const alteracao = alteracoes[String(carga.oc)];
 
-        cargas =
-            JSON.parse(
-                dados
-            );
+            return aplicarAlteracao(migrarCarga(carga, alteracao), alteracao);
+        });
 
-
-        return true;
-
-    }
-
-    catch (erro) {
-
-        console.error(
-            "Erro ao carregar cargas:",
-            erro
-        );
-
-
-        return false;
-
-    }
-
+    return true;
 }
-
 
 // ======================================================
 // ALTERAÇÕES MANUAIS
 // ======================================================
 
-function carregarAlteracoesSalvas() {
+function salvarAlteracaoCarga(carga) {
+    const alteracoes = carregarAlteracoesSalvas();
+    const alteracao = montarAlteracao(carga);
 
-    const dados =
-        localStorage.getItem(
-            CHAVE_ALTERACOES
-        );
-
-
-    if (!dados) {
-
-        return {};
-
+    if (alteracao) {
+        alteracoes[String(carga.oc)] = alteracao;
+    } else {
+        delete alteracoes[String(carga.oc)];
     }
 
+    const salvouAlteracoes = salvarArmazenamento(CHAVE_ALTERACOES, alteracoes);
+    const salvouCargas = salvarCargasNoNavegador();
 
-    try {
-
-        return JSON.parse(
-            dados
-        );
-
-    }
-
-    catch (erro) {
-
-        console.error(
-            "Erro ao carregar alterações:",
-            erro
-        );
-
-
-        return {};
-
-    }
-
+    return salvouAlteracoes && salvouCargas;
 }
-
-
-function salvarAlteracaoCarga(
-    carga
-) {
-
-    const alteracoes =
-        carregarAlteracoesSalvas();
-
-
-    alteracoes[
-        String(
-            carga.oc
-        )
-    ] = {
-
-        status:
-            carga.status,
-
-        doca:
-            carga.doca,
-
-        observacao:
-            carga.observacao || ""
-
-    };
-
-
-    localStorage.setItem(
-        CHAVE_ALTERACOES,
-        JSON.stringify(
-            alteracoes
-        )
-    );
-
-
-    salvarCargasNoNavegador();
-
-}
-
-
-function aplicarAlteracoesSalvas() {
-
-    const alteracoes =
-        carregarAlteracoesSalvas();
-
-
-    cargas.forEach(
-        carga => {
-
-            const alteracao =
-                alteracoes[
-                    String(
-                        carga.oc
-                    )
-                ];
-
-
-            if (!alteracao) {
-
-                return;
-
-            }
-
-
-            if (
-                alteracao.status !==
-                undefined
-            ) {
-
-                carga.status =
-                    alteracao.status;
-
-            }
-
-
-            if (
-                alteracao.doca !==
-                undefined
-            ) {
-
-                carga.doca =
-                    alteracao.doca;
-
-            }
-
-
-            if (
-                alteracao.observacao !==
-                undefined
-            ) {
-
-                carga.observacao =
-                    alteracao.observacao;
-
-            }
-
-        }
-    );
-
-}
-
 
 // ======================================================
 // HISTÓRICO
 // ======================================================
 
 function carregarHistoricoCompleto() {
+    const historico = lerArmazenamento(CHAVE_HISTORICO, {});
 
-    const dados =
-        localStorage.getItem(
-            CHAVE_HISTORICO
-        );
-
-
-    if (!dados) {
-
-        return {};
-
-    }
-
-
-    try {
-
-        return JSON.parse(
-            dados
-        );
-
-    }
-
-    catch (erro) {
-
-        console.error(
-            "Erro ao carregar histórico:",
-            erro
-        );
-
-
-        return {};
-
-    }
-
+    return historico && typeof historico === "object" ? historico : {};
 }
 
+function adicionarHistorico(historicoCompleto, oc, alteracoes) {
+    const chaveOC = String(oc);
 
-function registrarHistorico(
-    oc,
-    alteracoes
-) {
-
-    const historicoCompleto =
-        carregarHistoricoCompleto();
-
-
-    const chaveOC =
-        String(
-            oc
-        );
-
-
-    if (
-        !historicoCompleto[
-            chaveOC
-        ]
-    ) {
-
-        historicoCompleto[
-            chaveOC
-        ] = [];
-
+    if (!Array.isArray(historicoCompleto[chaveOC])) {
+        historicoCompleto[chaveOC] = [];
     }
 
+    historicoCompleto[chaveOC].unshift({
+        dataHora: new Date().toISOString(),
+        alteracoes,
+    });
+}
 
-    historicoCompleto[
-        chaveOC
-    ].unshift({
+function registrarHistorico(oc, alteracoes) {
+    const historicoCompleto = carregarHistoricoCompleto();
 
-        dataHora:
-            obterDataHoraAtual(),
+    adicionarHistorico(historicoCompleto, oc, alteracoes);
 
-        alteracoes:
-            alteracoes
+    return salvarArmazenamento(CHAVE_HISTORICO, historicoCompleto);
+}
 
+// Eventos gerados pela importação (planilha sobrescreveu alteração manual)
+function registrarEventosImportacao(eventos) {
+    if (eventos.length === 0) {
+        return;
+    }
+
+    const porOC = new Map();
+
+    eventos.forEach(({ oc, mensagem }) => {
+        if (!porOC.has(oc)) {
+            porOC.set(oc, []);
+        }
+
+        porOC.get(oc).push(mensagem);
     });
 
+    const historicoCompleto = carregarHistoricoCompleto();
 
-    localStorage.setItem(
-        CHAVE_HISTORICO,
-        JSON.stringify(
-            historicoCompleto
-        )
-    );
+    porOC.forEach((mensagens, oc) => adicionarHistorico(historicoCompleto, oc, mensagens));
 
+    salvarArmazenamento(CHAVE_HISTORICO, historicoCompleto);
 }
 
+function mostrarHistorico(oc) {
+    const historicoCompleto = carregarHistoricoCompleto();
+    const historico = Array.isArray(historicoCompleto[String(oc)]) ? historicoCompleto[String(oc)] : [];
 
-function mostrarHistorico(
-    oc
-) {
+    listaHistorico.replaceChildren();
 
-    const historicoCompleto =
-        carregarHistoricoCompleto();
+    historicoQuantidade.textContent = historico.length === 1 ? "1 alteração" : `${historico.length} alterações`;
 
+    if (historico.length === 0) {
+        const vazio = document.createElement("div");
 
-    const historico =
-        historicoCompleto[
-            String(
-                oc
-            )
-        ] || [];
+        vazio.className = "historico-vazio";
+        vazio.textContent = "Nenhuma alteração registrada.";
 
-
-    listaHistorico.innerHTML =
-        "";
-
-
-    historicoQuantidade.textContent =
-        historico.length === 1
-            ? "1 alteração"
-            : `${historico.length} alterações`;
-
-
-    if (
-        historico.length === 0
-    ) {
-
-        listaHistorico.innerHTML = `
-            <div class="historico-vazio">
-                Nenhuma alteração registrada.
-            </div>
-        `;
-
+        listaHistorico.appendChild(vazio);
 
         return;
-
     }
 
+    historico.forEach((item) => {
+        const bloco = document.createElement("div");
 
-    historico.forEach(
-        item => {
+        bloco.className = "historico-item";
 
-            const bloco =
-                document.createElement(
-                    "div"
-                );
+        const data = document.createElement("div");
 
+        data.className = "historico-data";
+        data.textContent = formatarDataHora(item.dataHora);
 
-            bloco.className =
-                "historico-item";
+        bloco.appendChild(data);
 
+        (Array.isArray(item.alteracoes) ? item.alteracoes : []).forEach((alteracao) => {
+            const mudanca = document.createElement("div");
 
-            const alteracoesHTML =
-                item.alteracoes
-                    .map(
-                        alteracao => `
-                            <div class="historico-mudanca">
-                                ${alteracao}
-                            </div>
-                        `
-                    )
-                    .join("");
+            mudanca.className = "historico-mudanca";
+            mudanca.textContent = alteracao;
 
+            bloco.appendChild(mudanca);
+        });
 
-            bloco.innerHTML = `
-
-                <div class="historico-data">
-                    ${item.dataHora}
-                </div>
-
-                ${alteracoesHTML}
-
-            `;
-
-
-            listaHistorico
-                .appendChild(
-                    bloco
-                );
-
-        }
-    );
-
+        listaHistorico.appendChild(bloco);
+    });
 }
-
-
-// ======================================================
-// STATUS PELA COR DA PLANILHA
-// ======================================================
-
-function identificarStatus(
-    celula
-) {
-
-    if (
-        !celula ||
-        !celula.fill ||
-        celula.fill.type !==
-            "pattern"
-    ) {
-
-        return "";
-
-    }
-
-
-    if (
-        !celula.fill.fgColor ||
-        !celula.fill.fgColor.argb
-    ) {
-
-        return "";
-
-    }
-
-
-    let cor =
-        celula.fill.fgColor.argb
-            .toUpperCase();
-
-
-    if (
-        cor.length === 8
-    ) {
-
-        cor =
-            cor.substring(
-                2
-            );
-
-    }
-
-
-    // VERDE
-
-    if (
-        cor === "00B050"
-    ) {
-
-        return "CARREGADO";
-
-    }
-
-
-    // AMARELO
-
-    if (
-        cor === "FFFF00"
-    ) {
-
-        return "DENTRO DO PRAZO";
-
-    }
-
-
-    // VERMELHO
-
-    if (
-        cor === "FF0000"
-    ) {
-
-        return "ATRASADO";
-
-    }
-
-
-    return "";
-
-}
-
-
-// ======================================================
-// STATUS
-// ======================================================
-
-function obterTextoStatus(
-    status
-) {
-
-    if (
-        status ===
-        "CARREGADO"
-    ) {
-
-        return "Carregado";
-
-    }
-
-
-    if (
-        status ===
-        "DENTRO DO PRAZO"
-    ) {
-
-        return "Dentro do prazo";
-
-    }
-
-
-    if (
-        status ===
-        "ATRASADO"
-    ) {
-
-        return "Atrasado";
-
-    }
-
-
-    return "Sem status";
-
-}
-
-
-function obterClasseStatus(
-    status
-) {
-
-    if (
-        status ===
-        "CARREGADO"
-    ) {
-
-        return "status-carregado";
-
-    }
-
-
-    if (
-        status ===
-        "DENTRO DO PRAZO"
-    ) {
-
-        return "status-prazo";
-
-    }
-
-
-    if (
-        status ===
-        "ATRASADO"
-    ) {
-
-        return "status-atrasado";
-
-    }
-
-
-    return "";
-
-}
-
 
 // ======================================================
 // TRANSPORTADORAS
 // ======================================================
 
 function atualizarTransportadoras() {
+    const valorSelecionado = filtroTransportadora.value;
 
-    const valorSelecionado =
-        filtroTransportadora.value;
-
-
-    const transportadoras =
-        [
-            ...new Set(
-                cargas
-                    .map(
-                        carga =>
-                            carga.transportadora
-                    )
-                    .filter(
-                        Boolean
-                    )
-            )
-        ].sort();
-
-
-    filtroTransportadora.innerHTML = `
-
-        <option value="">
-            Todas as transportadoras
-        </option>
-
-    `;
-
-
-    transportadoras.forEach(
-        transportadora => {
-
-            const option =
-                document.createElement(
-                    "option"
-                );
-
-
-            option.value =
-                transportadora;
-
-
-            option.textContent =
-                transportadora;
-
-
-            filtroTransportadora
-                .appendChild(
-                    option
-                );
-
-        }
+    const transportadoras = [...new Set(cargas.map((carga) => carga.transportadora).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, "pt-BR"),
     );
 
+    const opcaoTodas = document.createElement("option");
 
-    if (
-        transportadoras.includes(
-            valorSelecionado
-        )
-    ) {
+    opcaoTodas.value = "";
+    opcaoTodas.textContent = "Todas as transportadoras";
 
-        filtroTransportadora.value =
-            valorSelecionado;
+    filtroTransportadora.replaceChildren(opcaoTodas);
 
-    }
+    transportadoras.forEach((transportadora) => {
+        const opcao = document.createElement("option");
 
+        opcao.value = transportadora;
+        opcao.textContent = transportadora;
+
+        filtroTransportadora.appendChild(opcao);
+    });
+
+    filtroTransportadora.value = transportadoras.includes(valorSelecionado) ? valorSelecionado : "";
 }
-
 
 // ======================================================
 // KPIs
 // ======================================================
 
-function atualizarIndicadores(
-    cargasFiltradas
-) {
-
-    totalCargas.textContent =
-        cargasFiltradas.length;
-
-
-    totalCarregadas.textContent =
-        cargasFiltradas.filter(
-            carga =>
-                carga.status ===
-                "CARREGADO"
-        ).length;
-
-
-    totalPrazo.textContent =
-        cargasFiltradas.filter(
-            carga =>
-                carga.status ===
-                "DENTRO DO PRAZO"
-        ).length;
-
-
-    totalAtrasadas.textContent =
-        cargasFiltradas.filter(
-            carga =>
-                carga.status ===
-                "ATRASADO"
-        ).length;
-
-
-    const somaPeso =
-        cargasFiltradas.reduce(
-            (
-                total,
-                carga
-            ) => {
-
-                return (
-                    total +
-                    Number(
-                        carga.peso || 0
-                    )
-                );
-
-            },
-            0
-        );
-
-
-    pesoTotal.textContent =
-        formatarPeso(
-            somaPeso
-        );
-
-
-    const somaVenda =
-        cargasFiltradas.reduce(
-            (
-                total,
-                carga
-            ) => {
-
-                return (
-                    total +
-                    Number(
-                        carga.venda || 0
-                    )
-                );
-
-            },
-            0
-        );
-
-
-    vendaTotal.textContent =
-        formatarMoeda(
-            somaVenda
-        );
-
+function atualizarIndicadores(indicadores) {
+    totalCargas.textContent = indicadores.total;
+    totalCarregadas.textContent = indicadores.porStatus.CARREGADO;
+    totalPrazo.textContent = indicadores.porStatus["DENTRO DO PRAZO"];
+    totalAtrasadas.textContent = indicadores.porStatus.ATRASADO;
+    pesoTotal.textContent = formatarPeso(indicadores.peso);
+    vendaTotal.textContent = formatarMoeda(indicadores.venda);
 }
 
-
 // ======================================================
-// GRÁFICO STATUS
+// GRÁFICOS
 // ======================================================
 
-function atualizarGraficoStatus(
-    cargasFiltradas
-) {
-
-    const carregadas =
-        cargasFiltradas.filter(
-            carga =>
-                carga.status ===
-                "CARREGADO"
-        ).length;
-
-
-    const dentroPrazo =
-        cargasFiltradas.filter(
-            carga =>
-                carga.status ===
-                "DENTRO DO PRAZO"
-        ).length;
-
-
-    const atrasadas =
-        cargasFiltradas.filter(
-            carga =>
-                carga.status ===
-                "ATRASADO"
-        ).length;
-
-
-    const canvas =
-        document.getElementById(
-            "grafico-status"
-        );
-
-
-    if (
-        graficoStatus
-    ) {
-
-        graficoStatus.destroy();
-
-    }
-
-
-    graficoStatus =
-        new Chart(
-            canvas,
-            {
-
-                type:
-                    "doughnut",
-
-                data: {
-
-                    labels: [
-                        "Carregadas",
-                        "Dentro do prazo",
-                        "Atrasadas"
-                    ],
-
-                    datasets: [
-                        {
-
-                            data: [
-                                carregadas,
-                                dentroPrazo,
-                                atrasadas
-                            ],
-
-                            backgroundColor: [
-                                "#22c55e",
-                                "#eab308",
-                                "#ef4444"
-                            ],
-
-                            borderWidth:
-                                0,
-
-                            hoverOffset:
-                                6
-
-                        }
-                    ]
-
-                },
-
-
-                options: {
-
-                    responsive:
-                        true,
-
-                    maintainAspectRatio:
-                        false,
-
-                    cutout:
-                        "62%",
-
-                    plugins: {
-
-                        legend: {
-
-                            position:
-                                "bottom",
-
-                            labels: {
-
-                                usePointStyle:
-                                    true,
-
-                                padding:
-                                    18
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-            }
-        );
-
+function graficosDisponiveis() {
+    return typeof Chart !== "undefined";
 }
 
+function mostrarGraficosIndisponiveis() {
+    document.querySelectorAll(".grafico-area").forEach((area) => {
+        const mensagem = document.createElement("p");
 
-// ======================================================
-// GRÁFICO TRANSPORTADORA
-// ======================================================
+        mensagem.className = "grafico-indisponivel";
+        mensagem.textContent =
+            "Não foi possível carregar a biblioteca de gráficos. Verifique a conexão com a internet.";
 
-function atualizarGraficoTransportadora(
-    cargasFiltradas
-) {
+        area.replaceChildren(mensagem);
+    });
+}
 
-    const contagem =
-        {};
-
-
-    cargasFiltradas.forEach(
-        carga => {
-
-            const transportadora =
-                carga.transportadora ||
-                "Sem transportadora";
-
-
-            if (
-                !contagem[
-                    transportadora
-                ]
-            ) {
-
-                contagem[
-                    transportadora
-                ] = 0;
-
-            }
-
-
-            contagem[
-                transportadora
-            ]++;
-
-        }
-    );
-
-
-    const dadosOrdenados =
-        Object.entries(
-            contagem
-        ).sort(
-            (
-                a,
-                b
-            ) =>
-                b[1] -
-                a[1]
-        );
-
-
-    const transportadoras =
-        dadosOrdenados.map(
-            item =>
-                item[0]
-        );
-
-
-    const quantidades =
-        dadosOrdenados.map(
-            item =>
-                item[1]
-        );
-
-
-    const canvas =
-        document.getElementById(
-            "grafico-transportadora"
-        );
-
-
-    if (
-        graficoTransportadora
-    ) {
-
-        graficoTransportadora.destroy();
-
-    }
-
-
-    graficoTransportadora =
-        new Chart(
-            canvas,
-            {
-
-                type:
-                    "bar",
-
-                data: {
-
-                    labels:
-                        transportadoras,
-
-                    datasets: [
-                        {
-
-                            label:
-                                "Quantidade de cargas",
-
-                            data:
-                                quantidades,
-
-                            backgroundColor:
-                                "#334155",
-
-                            borderRadius:
-                                5
-
-                        }
-                    ]
-
+function criarGraficos() {
+    graficoStatus = new Chart($("grafico-status"), {
+        type: "doughnut",
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    data: [],
+                    backgroundColor: [],
+                    borderWidth: 0,
+                    hoverOffset: 6,
                 },
-
-
-                options: {
-
-                    responsive:
-                        true,
-
-                    maintainAspectRatio:
-                        false,
-
-                    indexAxis:
-                        "y",
-
-                    scales: {
-
-                        x: {
-
-                            beginAtZero:
-                                true,
-
-                            ticks: {
-
-                                precision:
-                                    0
-
-                            },
-
-                            grid: {
-
-                                color:
-                                    "#e2e8f0"
-
-                            }
-
-                        },
-
-
-                        y: {
-
-                            grid: {
-
-                                display:
-                                    false
-
-                            }
-
-                        }
-
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "62%",
+            plugins: {
+                legend: {
+                    position: "bottom",
+                    labels: {
+                        usePointStyle: true,
+                        padding: 18,
                     },
+                },
+            },
+        },
+    });
 
-
-                    plugins: {
-
-                        legend: {
-
-                            display:
-                                false
-
-                        }
-
-                    }
-
-                }
-
-            }
-        );
-
+    graficoTransportadora = new Chart($("grafico-transportadora"), {
+        type: "bar",
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: "Quantidade de cargas",
+                    data: [],
+                    backgroundColor: "#334155",
+                    borderRadius: 5,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: "y",
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 },
+                    grid: { color: "#e2e8f0" },
+                },
+                y: {
+                    grid: { display: false },
+                },
+            },
+            plugins: {
+                legend: { display: false },
+            },
+        },
+    });
 }
 
+// Atualiza os dados em vez de destruir e recriar os gráficos
+function atualizarGraficos(indicadores, lista) {
+    if (!graficoStatus || !graficoTransportadora) {
+        return;
+    }
 
-// ======================================================
-// MODAL
-// ======================================================
+    const fatias = [
+        [STATUS.CARREGADO, indicadores.porStatus.CARREGADO],
+        [STATUS["DENTRO DO PRAZO"], indicadores.porStatus["DENTRO DO PRAZO"]],
+        [STATUS.ATRASADO, indicadores.porStatus.ATRASADO],
+    ];
 
-function abrirModal(
-    carga
-) {
+    if (indicadores.porStatus.SEM_STATUS > 0) {
+        fatias.push([SEM_STATUS, indicadores.porStatus.SEM_STATUS]);
+    }
 
-    cargaSelecionada =
-        carga;
+    graficoStatus.data.labels = fatias.map(([info]) => info.rotuloGrafico);
+    graficoStatus.data.datasets[0].data = fatias.map(([, quantidade]) => quantidade);
+    graficoStatus.data.datasets[0].backgroundColor = fatias.map(([info]) => info.cor);
+    graficoStatus.update();
 
+    const porTransportadora = contarPorTransportadora(lista);
 
-    modalOC.textContent =
-        carga.oc;
-
-
-    modalRota.value =
-        carga.rota;
-
-
-    modalTransportadora.value =
-        carga.transportadora;
-
-
-    modalStatus.value =
-        carga.status;
-
-
-    modalDoca.value =
-        carga.doca;
-
-
-    modalGR.value =
-        carga.gr;
-
-
-    modalData.value =
-        carga.data;
-
-
-    modalPeso.value =
-        formatarPeso(
-            carga.peso
-        );
-
-
-    modalVenda.value =
-        formatarMoeda(
-            carga.venda
-        );
-
-
-    modalObservacao.value =
-        carga.observacao || "";
-
-
-    mostrarHistorico(
-        carga.oc
-    );
-
-
-    modal.classList.add(
-        "modal-aberto"
-    );
-
+    graficoTransportadora.data.labels = porTransportadora.map(([nome]) => nome);
+    graficoTransportadora.data.datasets[0].data = porTransportadora.map(([, quantidade]) => quantidade);
+    graficoTransportadora.update();
 }
-
-
-function fecharModal() {
-
-    modal.classList.remove(
-        "modal-aberto"
-    );
-
-
-    cargaSelecionada =
-        null;
-
-}
-
 
 // ======================================================
 // TABELA
 // ======================================================
 
-function atualizarTabela(
-    cargasFiltradas
-) {
+function criarCelula(conteudo) {
+    const celula = document.createElement("td");
 
-    tabela.innerHTML =
-        "";
+    if (conteudo instanceof Node) {
+        celula.appendChild(conteudo);
+    } else {
+        celula.textContent = conteudo ?? "";
+    }
 
-
-    cargasFiltradas.forEach(
-        carga => {
-
-            const linha =
-                document.createElement(
-                    "tr"
-                );
-
-
-            const classeStatus =
-                obterClasseStatus(
-                    carga.status
-                );
-
-
-            linha.className =
-                classeStatus;
-
-
-            linha.innerHTML = `
-
-                <td>
-                    ${carga.oc ?? ""}
-                </td>
-
-                <td>
-                    ${carga.rota ?? ""}
-                </td>
-
-                <td>
-                    ${carga.transportadora ?? ""}
-                </td>
-
-                <td>
-
-                    <span
-                        class="status-badge ${classeStatus}"
-                    >
-
-                        ${obterTextoStatus(
-                            carga.status
-                        )}
-
-                    </span>
-
-                </td>
-
-                <td>
-                    ${carga.gr ?? ""}
-                </td>
-
-                <td>
-                    ${formatarMoeda(
-                        carga.venda
-                    )}
-                </td>
-
-                <td>
-                    ${carga.doca ?? ""}
-                </td>
-
-                <td>
-                    ${formatarPeso(
-                        carga.peso
-                    )}
-                </td>
-
-                <td>
-                    ${carga.data ?? ""}
-                </td>
-
-            `;
-
-
-            linha.addEventListener(
-                "click",
-                function () {
-
-                    abrirModal(
-                        carga
-                    );
-
-                }
-            );
-
-
-            tabela.appendChild(
-                linha
-            );
-
-        }
-    );
-
+    return celula;
 }
 
+function criarBadgeStatus(status) {
+    const badge = document.createElement("span");
+
+    badge.className = `status-badge ${obterClasseStatus(status)}`;
+    badge.textContent = obterTextoStatus(status);
+
+    return badge;
+}
+
+function mostrarTabelaVazia() {
+    const linha = document.createElement("tr");
+    const celula = document.createElement("td");
+
+    linha.className = "linha-vazia";
+    celula.colSpan = 9;
+    celula.textContent =
+        cargas.length === 0
+            ? "Nenhuma carga carregada. Clique em “Importar / Atualizar Planilha” para começar."
+            : "Nenhuma carga encontrada com os filtros selecionados.";
+
+    linha.appendChild(celula);
+    tabela.appendChild(linha);
+}
+
+function atualizarTabela(lista) {
+    tabela.replaceChildren();
+
+    tabelaContador.textContent = cargas.length === 0 ? "" : `${lista.length} de ${cargas.length} cargas`;
+
+    if (lista.length === 0) {
+        mostrarTabelaVazia();
+
+        return;
+    }
+
+    const fragmento = document.createDocumentFragment();
+
+    lista.forEach((carga) => {
+        const linha = document.createElement("tr");
+
+        linha.className = obterClasseStatus(carga.status);
+        linha.tabIndex = 0;
+        linha.setAttribute("aria-label", `Abrir detalhes da OC ${carga.oc}`);
+
+        linha.append(
+            criarCelula(carga.oc),
+            criarCelula(carga.rota),
+            criarCelula(carga.transportadora),
+            criarCelula(criarBadgeStatus(carga.status)),
+            criarCelula(carga.gr),
+            criarCelula(formatarMoeda(carga.venda)),
+            criarCelula(carga.doca),
+            criarCelula(formatarPeso(carga.peso)),
+            criarCelula(carga.data),
+        );
+
+        linha.addEventListener("click", () => abrirModal(carga));
+
+        linha.addEventListener("keydown", (evento) => {
+            if (evento.key === "Enter" || evento.key === " ") {
+                evento.preventDefault();
+                abrirModal(carga);
+            }
+        });
+
+        fragmento.appendChild(linha);
+    });
+
+    tabela.appendChild(fragmento);
+}
+
+// ======================================================
+// ORDENAÇÃO
+// ======================================================
+
+function atualizarIndicadoresOrdenacao() {
+    document.querySelectorAll("th[data-campo]").forEach((th) => {
+        if (th.dataset.campo === ordenacao.campo) {
+            th.setAttribute("aria-sort", ordenacao.direcao === "asc" ? "ascending" : "descending");
+        } else {
+            th.removeAttribute("aria-sort");
+        }
+    });
+}
+
+document.querySelectorAll("th[data-campo] .btn-ordenar").forEach((botao) => {
+    botao.addEventListener("click", () => {
+        const campo = botao.closest("th").dataset.campo;
+
+        if (ordenacao.campo === campo) {
+            ordenacao.direcao = ordenacao.direcao === "asc" ? "desc" : "asc";
+        } else {
+            ordenacao.campo = campo;
+            ordenacao.direcao = "asc";
+        }
+
+        atualizarIndicadoresOrdenacao();
+        aplicarFiltros();
+    });
+});
 
 // ======================================================
 // FILTROS
 // ======================================================
 
-function aplicarFiltros() {
-
-    const textoOC =
-        campoPesquisa.value
-            .trim();
-
-
-    const transportadoraSelecionada =
-        filtroTransportadora.value;
-
-
-    const statusSelecionado =
-        filtroStatus.value;
-
-
-    const dataSelecionada =
-        filtroData.value;
-
-
-    const dataSelecionadaBR =
-        dataSelecionada
-            ? dataSelecionada
-                .split("-")
-                .reverse()
-                .join("/")
-            : "";
-
-
-    const cargasFiltradas =
-        cargas.filter(
-            carga => {
-
-                const correspondeOC =
-                    String(
-                        carga.oc
-                    ).includes(
-                        textoOC
-                    );
-
-
-                const correspondeTransportadora =
-                    transportadoraSelecionada ===
-                        "" ||
-                    carga.transportadora ===
-                        transportadoraSelecionada;
-
-
-                const correspondeStatus =
-                    statusSelecionado ===
-                        "" ||
-                    carga.status ===
-                        statusSelecionado;
-
-
-                const correspondeData =
-                    dataSelecionadaBR ===
-                        "" ||
-                    carga.data ===
-                        dataSelecionadaBR;
-
-
-                return (
-                    correspondeOC &&
-                    correspondeTransportadora &&
-                    correspondeStatus &&
-                    correspondeData
-                );
-
-            }
-        );
-
-
-    atualizarIndicadores(
-        cargasFiltradas
-    );
-
-
-    atualizarTabela(
-        cargasFiltradas
-    );
-
-
-    atualizarGraficoStatus(
-        cargasFiltradas
-    );
-
-
-    atualizarGraficoTransportadora(
-        cargasFiltradas
-    );
-
+function obterFiltros() {
+    return {
+        oc: campoPesquisa.value.trim(),
+        transportadora: filtroTransportadora.value,
+        status: filtroStatus.value,
+        data: filtroData.value,
+    };
 }
 
+function aplicarFiltros() {
+    cargasFiltradas = ordenarCargas(filtrarCargas(cargas, obterFiltros()), ordenacao.campo, ordenacao.direcao);
+
+    const indicadores = calcularIndicadores(cargasFiltradas);
+
+    atualizarIndicadores(indicadores);
+    atualizarTabela(cargasFiltradas);
+    atualizarGraficos(indicadores, cargasFiltradas);
+}
+
+function limparFiltros() {
+    campoPesquisa.value = "";
+    filtroTransportadora.value = "";
+    filtroStatus.value = "";
+    filtroData.value = "";
+
+    aplicarFiltros();
+}
+
+// Evita recalcular tudo a cada tecla digitada
+function comAtraso(funcao, espera) {
+    let temporizador = null;
+
+    return (...argumentos) => {
+        clearTimeout(temporizador);
+        temporizador = setTimeout(() => funcao(...argumentos), espera);
+    };
+}
+
+// ======================================================
+// MODAL
+// ======================================================
+
+function descreverOrigem(valorAtual, valorPlanilha, formatar) {
+    if (valorPlanilha === undefined) {
+        return "";
+    }
+
+    if (valorAtual === valorPlanilha) {
+        return "Conforme a planilha";
+    }
+
+    return `Alterado manualmente (planilha: ${formatar(valorPlanilha)})`;
+}
+
+function possuiDiferencaDaPlanilha(carga) {
+    const statusDiferente = carga.statusPlanilha !== undefined && carga.status !== carga.statusPlanilha;
+    const docaDiferente = carga.docaPlanilha !== undefined && carga.doca !== carga.docaPlanilha;
+
+    return statusDiferente || docaDiferente;
+}
+
+function preencherModal(carga) {
+    modalOC.textContent = carga.oc;
+    modalRota.value = carga.rota ?? "";
+    modalTransportadora.value = carga.transportadora ?? "";
+    modalStatus.value = STATUS[carga.status] ? carga.status : "";
+    modalDoca.value = carga.doca ?? "";
+    modalGR.value = carga.gr ?? "";
+    modalData.value = carga.data ?? "";
+    modalPeso.value = formatarPeso(carga.peso);
+    modalVenda.value = formatarMoeda(carga.venda);
+    modalObservacao.value = carga.observacao || "";
+
+    modalStatusOrigem.textContent = descreverOrigem(carga.status, carga.statusPlanilha, obterTextoStatus);
+    modalDocaOrigem.textContent = descreverOrigem(carga.doca, carga.docaPlanilha, (doca) => doca || "Sem doca");
+
+    btnRestaurar.hidden = !possuiDiferencaDaPlanilha(carga);
+
+    mostrarHistorico(carga.oc);
+}
+
+function abrirModal(carga) {
+    cargaSelecionada = carga;
+    elementoFocoAnterior = document.activeElement;
+
+    preencherModal(carga);
+
+    modal.classList.add("modal-aberto");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("sem-rolagem");
+
+    modalStatus.focus();
+}
+
+function fecharModal() {
+    modal.classList.remove("modal-aberto");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("sem-rolagem");
+
+    cargaSelecionada = null;
+
+    // Devolve o foco para a linha que abriu o modal (se ainda existir)
+    if (elementoFocoAnterior && document.body.contains(elementoFocoAnterior)) {
+        elementoFocoAnterior.focus();
+    }
+
+    elementoFocoAnterior = null;
+}
+
+function modalEstaAberto() {
+    return modal.classList.contains("modal-aberto");
+}
+
+// Mantém o foco do teclado dentro do modal
+function manterFocoNoModal(evento) {
+    const focaveis = [
+        ...modalConteudo.querySelectorAll("button, input, select, textarea, [tabindex]:not([tabindex='-1'])"),
+    ].filter((elemento) => !elemento.disabled && !elemento.hidden);
+
+    if (focaveis.length === 0) {
+        return;
+    }
+
+    const primeiro = focaveis[0];
+    const ultimo = focaveis[focaveis.length - 1];
+
+    if (evento.shiftKey && document.activeElement === primeiro) {
+        evento.preventDefault();
+        ultimo.focus();
+    } else if (!evento.shiftKey && document.activeElement === ultimo) {
+        evento.preventDefault();
+        primeiro.focus();
+    } else if (!modalConteudo.contains(document.activeElement)) {
+        evento.preventDefault();
+        primeiro.focus();
+    }
+}
 
 // ======================================================
 // SALVAR ALTERAÇÕES DO MODAL
 // ======================================================
 
-btnSalvar.addEventListener(
-    "click",
-    function () {
+function descreverAlteracoes(carga, novoStatus, novaDoca, novaObservacao) {
+    const alteracoes = [];
 
-        if (
-            !cargaSelecionada
-        ) {
+    const statusAntigo = carga.status || "";
+    const docaAntiga = carga.doca ?? "";
+    const observacaoAntiga = carga.observacao || "";
 
-            return;
-
-        }
-
-
-        const statusAntigo =
-            cargaSelecionada.status;
-
-
-        const docaAntiga =
-            String(
-                cargaSelecionada.doca ??
-                ""
-            );
-
-
-        const observacaoAntiga =
-            cargaSelecionada.observacao ||
-            "";
-
-
-        const novoStatus =
-            modalStatus.value;
-
-
-        const novaDoca =
-            String(
-                modalDoca.value
-            );
-
-
-        const novaObservacao =
-            modalObservacao.value
-                .trim();
-
-
-        const alteracoesHistorico =
-            [];
-
-
-        if (
-            statusAntigo !==
-            novoStatus
-        ) {
-
-            alteracoesHistorico.push(
-                `Status: ${obterTextoStatus(statusAntigo)} → ${obterTextoStatus(novoStatus)}`
-            );
-
-        }
-
-
-        if (
-            docaAntiga !==
-            novaDoca
-        ) {
-
-            alteracoesHistorico.push(
-                `Doca: ${docaAntiga || "Sem doca"} → ${novaDoca || "Sem doca"}`
-            );
-
-        }
-
-
-        if (
-            observacaoAntiga !==
-            novaObservacao
-        ) {
-
-            if (
-                !observacaoAntiga &&
-                novaObservacao
-            ) {
-
-                alteracoesHistorico.push(
-                    `Observação adicionada: "${novaObservacao}"`
-                );
-
-            }
-
-            else if (
-                observacaoAntiga &&
-                !novaObservacao
-            ) {
-
-                alteracoesHistorico.push(
-                    "Observação removida"
-                );
-
-            }
-
-            else {
-
-                alteracoesHistorico.push(
-                    "Observação alterada"
-                );
-
-            }
-
-        }
-
-
-        if (
-            alteracoesHistorico.length ===
-            0
-        ) {
-
-            alert(
-                "Nenhuma alteração foi realizada."
-            );
-
-
-            return;
-
-        }
-
-
-        cargaSelecionada.status =
-            novoStatus;
-
-
-        cargaSelecionada.doca =
-            novaDoca;
-
-
-        cargaSelecionada.observacao =
-            novaObservacao;
-
-
-        salvarAlteracaoCarga(
-            cargaSelecionada
-        );
-
-
-        registrarHistorico(
-            cargaSelecionada.oc,
-            alteracoesHistorico
-        );
-
-
-        mostrarHistorico(
-            cargaSelecionada.oc
-        );
-
-
-        aplicarFiltros();
-
-
-        alert(
-            "Alterações salvas com sucesso!"
-        );
-
+    if (statusAntigo !== novoStatus) {
+        alteracoes.push(`Status: ${obterTextoStatus(statusAntigo)} → ${obterTextoStatus(novoStatus)}`);
     }
-);
 
+    if (docaAntiga !== novaDoca) {
+        alteracoes.push(`Doca: ${docaAntiga || "Sem doca"} → ${novaDoca || "Sem doca"}`);
+    }
+
+    if (observacaoAntiga !== novaObservacao) {
+        if (!observacaoAntiga) {
+            alteracoes.push(`Observação adicionada: "${novaObservacao}"`);
+        } else if (!novaObservacao) {
+            alteracoes.push("Observação removida");
+        } else {
+            alteracoes.push("Observação alterada");
+        }
+    }
+
+    return alteracoes;
+}
+
+function concluirAlteracao(carga, descricao) {
+    const salvou = salvarAlteracaoCarga(carga);
+
+    registrarHistorico(carga.oc, descricao);
+
+    preencherModal(carga);
+    aplicarFiltros();
+
+    if (salvou) {
+        mostrarAviso("Alterações salvas com sucesso!");
+    }
+}
+
+btnSalvar.addEventListener("click", () => {
+    if (!cargaSelecionada) {
+        return;
+    }
+
+    const novoStatus = modalStatus.value;
+    const novaDoca = modalDoca.value.trim();
+    const novaObservacao = modalObservacao.value.trim();
+
+    const descricao = descreverAlteracoes(cargaSelecionada, novoStatus, novaDoca, novaObservacao);
+
+    if (descricao.length === 0) {
+        mostrarAviso("Nenhuma alteração foi realizada.", "info");
+
+        return;
+    }
+
+    cargaSelecionada.status = novoStatus;
+    cargaSelecionada.doca = novaDoca;
+    cargaSelecionada.observacao = novaObservacao;
+
+    concluirAlteracao(cargaSelecionada, descricao);
+});
+
+// Volta status e doca para os valores da planilha (mantém a observação)
+btnRestaurar.addEventListener("click", () => {
+    if (!cargaSelecionada) {
+        return;
+    }
+
+    const carga = cargaSelecionada;
+    const descricao = [];
+
+    if (carga.statusPlanilha !== undefined && carga.status !== carga.statusPlanilha) {
+        descricao.push(
+            `Status restaurado da planilha: ${obterTextoStatus(carga.status)} → ${obterTextoStatus(carga.statusPlanilha)}`,
+        );
+
+        carga.status = carga.statusPlanilha;
+    }
+
+    if (carga.docaPlanilha !== undefined && carga.doca !== carga.docaPlanilha) {
+        descricao.push(
+            `Doca restaurada da planilha: ${carga.doca || "Sem doca"} → ${carga.docaPlanilha || "Sem doca"}`,
+        );
+
+        carga.doca = carga.docaPlanilha;
+    }
+
+    if (descricao.length === 0) {
+        return;
+    }
+
+    concluirAlteracao(carga, descricao);
+});
 
 // ======================================================
 // FECHAR MODAL
 // ======================================================
 
-btnFecharModal.addEventListener(
-    "click",
-    fecharModal
-);
+btnFecharModal.addEventListener("click", fecharModal);
 
+btnCancelar.addEventListener("click", fecharModal);
 
-btnCancelar.addEventListener(
-    "click",
-    fecharModal
-);
-
-
-modal.addEventListener(
-    "click",
-    function (
-        evento
-    ) {
-
-        if (
-            evento.target ===
-            modal
-        ) {
-
-            fecharModal();
-
-        }
-
+modal.addEventListener("click", (evento) => {
+    if (evento.target === modal) {
+        fecharModal();
     }
-);
+});
 
-
-// ESC FECHA O MODAL
-
-document.addEventListener(
-    "keydown",
-    function (
-        evento
-    ) {
-
-        if (
-            evento.key ===
-                "Escape" &&
-            modal.classList.contains(
-                "modal-aberto"
-            )
-        ) {
-
-            fecharModal();
-
-        }
-
+document.addEventListener("keydown", (evento) => {
+    if (!modalEstaAberto()) {
+        return;
     }
-);
 
+    if (evento.key === "Escape") {
+        fecharModal();
+    } else if (evento.key === "Tab") {
+        manterFocoNoModal(evento);
+    }
+});
 
 // ======================================================
 // IMPORTAR / ATUALIZAR PLANILHA
 // ======================================================
 
-btnImportar.addEventListener(
-    "click",
-    async function () {
+// Procura a primeira cor de status: primeiro na célula da OC,
+// depois nas demais células da linha (linha inteira pintada).
+function identificarStatusDaLinha(linha, colunas) {
+    const statusOC = identificarStatus(linha.getCell(colunas.oc));
 
-        const arquivo =
-            arquivoExcel.files[0];
+    if (statusOC) {
+        return statusOC;
+    }
 
+    for (const numeroColuna of Object.values(colunas)) {
+        const status = identificarStatus(linha.getCell(numeroColuna));
 
-        if (!arquivo) {
+        if (status) {
+            return status;
+        }
+    }
 
-            alert(
-                "Selecione uma planilha primeiro."
-            );
+    return "";
+}
 
+function lerCargasDaPlanilha(planilha) {
+    const cabecalhos = [];
+
+    planilha.getRow(1).eachCell({ includeEmpty: true }, (celula, numeroColuna) => {
+        cabecalhos[numeroColuna] = converterTexto(celula.value);
+    });
+
+    const { colunas, ausentes, porPosicao } = mapearColunas(cabecalhos);
+
+    const cargasLidas = [];
+    let semStatus = 0;
+
+    planilha.eachRow((linha, numeroLinha) => {
+        // A linha 1 é o cabeçalho
+        if (numeroLinha === 1) {
+            return;
+        }
+
+        const valor = (campo) => (colunas[campo] ? linha.getCell(colunas[campo]).value : null);
+
+        const oc = converterTexto(valor("oc"));
+
+        if (!oc) {
+            return;
+        }
+
+        // Coluna "Status" (texto) tem prioridade sobre a cor
+        const status =
+            identificarStatusPorTexto(converterTexto(valor("status"))) || identificarStatusDaLinha(linha, colunas);
+
+        if (!status) {
+            semStatus++;
+        }
+
+        cargasLidas.push(
+            criarCarga({
+                oc,
+                rota: valor("rota"),
+                transportadora: valor("transportadora"),
+                gr: valor("gr"),
+                venda: valor("venda"),
+                doca: valor("doca"),
+                peso: valor("peso"),
+                data: valor("data"),
+                status,
+            }),
+        );
+    });
+
+    return { cargas: cargasLidas, ausentes, porPosicao, semStatus };
+}
+
+const NOMES_CAMPOS = {
+    rota: "Rota",
+    transportadora: "Transportadora",
+    gr: "GR",
+    venda: "Venda",
+    doca: "Doca",
+    peso: "Peso",
+    data: "Data",
+};
+
+async function importarPlanilha(arquivo) {
+    if (!arquivo) {
+        return;
+    }
+
+    if (!/\.xlsx$/i.test(arquivo.name)) {
+        mostrarAviso("Selecione um arquivo no formato .xlsx.", "erro");
+
+        return;
+    }
+
+    if (typeof ExcelJS === "undefined") {
+        mostrarAviso(
+            "Não foi possível carregar a biblioteca de leitura de Excel. Verifique a conexão com a internet.",
+            "erro",
+        );
+
+        return;
+    }
+
+    btnImportar.disabled = true;
+    btnImportar.textContent = "Importando...";
+
+    try {
+        const workbook = new ExcelJS.Workbook();
+
+        await workbook.xlsx.load(await arquivo.arrayBuffer());
+
+        const planilha = workbook.worksheets[0];
+
+        if (!planilha) {
+            mostrarAviso("A planilha não possui nenhuma aba.", "erro");
 
             return;
-
         }
 
+        const leitura = lerCargasDaPlanilha(planilha);
 
-        try {
-
-            const buffer =
-                await arquivo
-                    .arrayBuffer();
-
-
-            const workbook =
-                new ExcelJS.Workbook();
-
-
-            await workbook.xlsx.load(
-                buffer
+        // Não apaga a base atual por causa de um arquivo errado
+        if (leitura.cargas.length === 0) {
+            mostrarAviso(
+                "Nenhuma carga encontrada na planilha. Confira se a primeira aba tem a coluna OC preenchida.",
+                "erro",
+                8000,
             );
 
-
-            const planilha =
-                workbook.worksheets[0];
-
-
-            const cargasImportadas =
-                [];
-
-
-            planilha.eachRow(
-                (
-                    linha,
-                    numeroLinha
-                ) => {
-
-                    if (
-                        numeroLinha ===
-                        1
-                    ) {
-
-                        return;
-
-                    }
-
-
-                    const oc =
-                        linha
-                            .getCell(1)
-                            .value;
-
-
-                    if (!oc) {
-
-                        return;
-
-                    }
-
-
-                    const rota =
-                        linha
-                            .getCell(2)
-                            .value;
-
-
-                    const transportadora =
-                        linha
-                            .getCell(3)
-                            .value;
-
-
-                    const gr =
-                        linha
-                            .getCell(4)
-                            .value;
-
-
-                    const venda =
-                        linha
-                            .getCell(5)
-                            .value;
-
-
-                    const doca =
-                        linha
-                            .getCell(6)
-                            .value;
-
-
-                    const peso =
-                        linha
-                            .getCell(7)
-                            .value;
-
-
-                    const data =
-                        linha
-                            .getCell(8)
-                            .value;
-
-
-                    const status =
-                        identificarStatus(
-                            linha.getCell(
-                                1
-                            )
-                        );
-
-
-                    cargasImportadas.push({
-
-                        oc:
-                            oc,
-
-                        rota:
-                            String(
-                                rota || ""
-                            ).trim(),
-
-                        transportadora:
-                            String(
-                                transportadora ||
-                                ""
-                            ).trim(),
-
-                        status:
-                            status,
-
-                        gr:
-                            Number(
-                                gr || 0
-                            ),
-
-                        venda:
-                            Number(
-                                venda || 0
-                            ),
-
-                        doca:
-                            doca,
-
-                        peso:
-                            Number(
-                                peso || 0
-                            ),
-
-                        data:
-                            converterData(
-                                data
-                            ),
-
-                        observacao:
-                            ""
-
-                    });
-
-                }
-            );
-
-
-            let novas =
-                0;
-
-
-            let atualizadas =
-                0;
-
-
-            const alteracoes =
-                carregarAlteracoesSalvas();
-
-
-            const novaBase =
-                cargasImportadas.map(
-                    cargaNova => {
-
-                        const cargaAntiga =
-                            cargas.find(
-                                carga =>
-                                    String(
-                                        carga.oc
-                                    ) ===
-                                    String(
-                                        cargaNova.oc
-                                    )
-                            );
-
-
-                        if (
-                            cargaAntiga
-                        ) {
-
-                            atualizadas++;
-
-                        }
-
-                        else {
-
-                            novas++;
-
-                        }
-
-
-                        const alteracao =
-                            alteracoes[
-                                String(
-                                    cargaNova.oc
-                                )
-                            ];
-
-
-                        if (
-                            alteracao
-                        ) {
-
-                            if (
-                                alteracao.status !==
-                                undefined
-                            ) {
-
-                                cargaNova.status =
-                                    alteracao.status;
-
-                            }
-
-
-                            if (
-                                alteracao.doca !==
-                                undefined
-                            ) {
-
-                                cargaNova.doca =
-                                    alteracao.doca;
-
-                            }
-
-
-                            if (
-                                alteracao.observacao !==
-                                undefined
-                            ) {
-
-                                cargaNova.observacao =
-                                    alteracao.observacao;
-
-                            }
-
-                        }
-
-                        else if (
-                            cargaAntiga &&
-                            cargaAntiga.observacao
-                        ) {
-
-                            cargaNova.observacao =
-                                cargaAntiga.observacao;
-
-                        }
-
-
-                        return cargaNova;
-
-                    }
-                );
-
-
-            cargas =
-                novaBase;
-
-
-            salvarCargasNoNavegador();
-
-
-            campoPesquisa.value =
-                "";
-
-
-            filtroStatus.value =
-                "";
-
-
-            filtroData.value =
-                "";
-
-
-            atualizarTransportadoras();
-
-
-            filtroTransportadora.value =
-                "";
-
-
-            aplicarFiltros();
-
-
-            alert(
-                "Planilha atualizada com sucesso!\n\n" +
-                `Atualizadas: ${atualizadas}\n` +
-                `Novas: ${novas}\n` +
-                `Total: ${cargas.length}`
-            );
-
+            return;
         }
 
-        catch (erro) {
+        const resultado = mesclarImportacao(cargas, leitura.cargas, carregarAlteracoesSalvas());
 
-            console.error(
-                erro
-            );
+        cargas = resultado.cargas;
 
+        salvarArmazenamento(CHAVE_ALTERACOES, resultado.alteracoes);
+        salvarCargasNoNavegador();
+        registrarEventosImportacao(resultado.eventos);
 
-            alert(
-                "Ocorreu um erro ao atualizar a planilha."
-            );
+        atualizarTransportadoras();
+        limparFiltros();
 
+        const { resumo } = resultado;
+
+        const linhas = [
+            "Planilha atualizada com sucesso!",
+            `Atualizadas: ${resumo.atualizadas} · Novas: ${resumo.novas} · Removidas: ${resumo.removidas}`,
+            `Total: ${resumo.total}`,
+        ];
+
+        if (resumo.duplicadas > 0) {
+            linhas.push(`OCs duplicadas ignoradas: ${resumo.duplicadas}`);
         }
 
+        if (leitura.semStatus > 0) {
+            linhas.push(`Cargas sem status (cor não reconhecida): ${leitura.semStatus}`);
+        }
+
+        if (resultado.eventos.length > 0) {
+            linhas.push(`Alterações manuais substituídas pela planilha: ${resultado.eventos.length}`);
+        }
+
+        if (leitura.ausentes.length > 0) {
+            linhas.push(`Colunas não encontradas: ${leitura.ausentes.map((campo) => NOMES_CAMPOS[campo]).join(", ")}`);
+        }
+
+        const temAlerta = leitura.ausentes.length > 0 || leitura.semStatus > 0 || resumo.duplicadas > 0;
+
+        mostrarAviso(linhas.join("\n"), temAlerta ? "info" : "sucesso", 10000);
+    } catch (erro) {
+        console.error(erro);
+
+        mostrarAviso("Ocorreu um erro ao ler a planilha. Verifique se o arquivo não está corrompido.", "erro");
+    } finally {
+        btnImportar.disabled = false;
+        btnImportar.textContent = "Importar / Atualizar Planilha";
+
+        // Permite importar o mesmo arquivo novamente
+        arquivoExcel.value = "";
     }
-);
+}
 
+btnImportar.addEventListener("click", () => arquivoExcel.click());
+
+arquivoExcel.addEventListener("change", () => importarPlanilha(arquivoExcel.files[0]));
+
+// ======================================================
+// EXPORTAR CSV
+// ======================================================
+
+btnExportar.addEventListener("click", () => {
+    if (cargasFiltradas.length === 0) {
+        mostrarAviso("Não há cargas para exportar.", "info");
+
+        return;
+    }
+
+    // BOM para o Excel reconhecer os acentos (UTF-8)
+    const conteudo = "﻿" + gerarCSV(cargasFiltradas);
+    const arquivo = new Blob([conteudo], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(arquivo);
+
+    const hoje = new Date();
+    const dataArquivo = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(
+        hoje.getDate(),
+    ).padStart(2, "0")}`;
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `cargas-${dataArquivo}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+// ======================================================
+// LIMPAR DADOS
+// ======================================================
+
+btnLimparDados.addEventListener("click", () => {
+    if (cargas.length === 0) {
+        mostrarAviso("Não há dados salvos para limpar.", "info");
+
+        return;
+    }
+
+    const confirmou = confirm(
+        "Isso vai apagar do navegador todas as cargas importadas, alterações manuais e o histórico.\n\nDeseja continuar?",
+    );
+
+    if (!confirmou) {
+        return;
+    }
+
+    removerArmazenamento(CHAVE_CARGAS);
+    removerArmazenamento(CHAVE_ALTERACOES);
+    removerArmazenamento(CHAVE_HISTORICO);
+
+    cargas = [];
+
+    atualizarTransportadoras();
+    limparFiltros();
+
+    mostrarAviso("Dados removidos do navegador.");
+});
 
 // ======================================================
 // EVENTOS DOS FILTROS
 // ======================================================
 
-campoPesquisa.addEventListener(
-    "input",
-    aplicarFiltros
-);
+campoPesquisa.addEventListener("input", comAtraso(aplicarFiltros, 200));
 
+filtroTransportadora.addEventListener("change", aplicarFiltros);
 
-filtroTransportadora.addEventListener(
-    "change",
-    aplicarFiltros
-);
+filtroStatus.addEventListener("change", aplicarFiltros);
 
+filtroData.addEventListener("change", aplicarFiltros);
 
-filtroStatus.addEventListener(
-    "change",
-    aplicarFiltros
-);
-
-
-filtroData.addEventListener(
-    "change",
-    aplicarFiltros
-);
-
+btnLimparFiltros.addEventListener("click", limparFiltros);
 
 // ======================================================
 // INICIALIZAÇÃO
@@ -2253,21 +1165,14 @@ filtroData.addEventListener(
 
 mostrarDataAtual();
 
-
-const possuiBaseSalva =
-    carregarCargasDoNavegador();
-
-
-if (
-    possuiBaseSalva
-) {
-
-    aplicarAlteracoesSalvas();
-
+if (graficosDisponiveis()) {
+    criarGraficos();
+} else {
+    mostrarGraficosIndisponiveis();
 }
 
+carregarCargasDoNavegador();
 
 atualizarTransportadoras();
-
 
 aplicarFiltros();

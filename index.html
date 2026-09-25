@@ -1,474 +1,326 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="description"
+            content="Dashboard para acompanhamento operacional de cargas a partir de planilhas Excel."
+        />
 
-<head>
-    <meta charset="UTF-8">
+        <title>Controle de Cargas</title>
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+        <link rel="stylesheet" href="style.css" />
+    </head>
 
-    <title>Controle de Cargas</title>
-
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
-</head>
-
-<body>
-
-    <header class="cabecalho">
-
-        <div>
-            <h1>Controle de Cargas</h1>
-            <p>Acompanhamento operacional de carregamentos</p>
-        </div>
-
-        <div
-            class="data-atual"
-            id="data-atual"
-        >
-        </div>
-
-    </header>
-
-
-    <main class="container">
-
-        <!-- ====================================== -->
-        <!-- KPIs -->
-        <!-- ====================================== -->
-
-        <section class="indicadores">
-
-            <div class="card">
-                <span>Total de Cargas</span>
-                <strong id="total-cargas">0</strong>
+    <body>
+        <header class="cabecalho">
+            <div>
+                <h1>Controle de Cargas</h1>
+                <p>Acompanhamento operacional de carregamentos</p>
             </div>
 
-            <div class="card card-carregado">
-                <span>Carregadas</span>
-                <strong id="total-carregadas">0</strong>
-            </div>
+            <div class="data-atual" id="data-atual"></div>
+        </header>
 
-            <div class="card card-prazo">
-                <span>Dentro do Prazo</span>
-                <strong id="total-prazo">0</strong>
-            </div>
+        <main class="container">
+            <!-- ====================================== -->
+            <!-- KPIs -->
+            <!-- ====================================== -->
 
-            <div class="card card-atrasado">
-                <span>Atrasadas</span>
-                <strong id="total-atrasadas">0</strong>
-            </div>
+            <section class="indicadores" aria-label="Indicadores">
+                <div class="card">
+                    <span>Total de Cargas</span>
+                    <strong id="total-cargas">0</strong>
+                </div>
 
-            <div class="card">
-                <span>Peso Total</span>
-                <strong id="peso-total">0 kg</strong>
-            </div>
+                <div class="card card-carregado">
+                    <span>Carregadas</span>
+                    <strong id="total-carregadas">0</strong>
+                </div>
 
-            <div class="card">
-                <span>Venda Total</span>
-                <strong id="venda-total">R$ 0,00</strong>
-            </div>
+                <div class="card card-prazo">
+                    <span>Dentro do Prazo</span>
+                    <strong id="total-prazo">0</strong>
+                </div>
 
-        </section>
+                <div class="card card-atrasado">
+                    <span>Atrasadas</span>
+                    <strong id="total-atrasadas">0</strong>
+                </div>
 
+                <div class="card">
+                    <span>Peso Total</span>
+                    <strong id="peso-total">0,00 kg</strong>
+                </div>
 
-        <!-- ====================================== -->
-        <!-- FILTROS -->
-        <!-- ====================================== -->
+                <div class="card">
+                    <span>Venda Total</span>
+                    <strong id="venda-total">R$ 0,00</strong>
+                </div>
+            </section>
 
-        <section class="filtros">
+            <!-- ====================================== -->
+            <!-- FILTROS E AÇÕES -->
+            <!-- ====================================== -->
 
-            <input
-                type="text"
-                id="pesquisa-oc"
-                placeholder="Pesquisar OC"
-            >
+            <section class="filtros" aria-label="Filtros e ações">
+                <div class="grupo-filtros">
+                    <label class="visualmente-oculto" for="pesquisa-oc">Pesquisar OC</label>
+                    <input type="search" id="pesquisa-oc" placeholder="Pesquisar OC" autocomplete="off" />
 
-            <select id="filtro-transportadora">
+                    <label class="visualmente-oculto" for="filtro-transportadora">Transportadora</label>
+                    <select id="filtro-transportadora">
+                        <option value="">Todas as transportadoras</option>
+                    </select>
 
-                <option value="">
-                    Todas as transportadoras
-                </option>
+                    <label class="visualmente-oculto" for="filtro-status">Status</label>
+                    <select id="filtro-status">
+                        <option value="">Todos os status</option>
+                        <option value="CARREGADO">Carregado</option>
+                        <option value="DENTRO DO PRAZO">Dentro do prazo</option>
+                        <option value="ATRASADO">Atrasado</option>
+                        <option value="SEM_STATUS">Sem status</option>
+                    </select>
 
-            </select>
+                    <label class="visualmente-oculto" for="filtro-data">Data</label>
+                    <input type="date" id="filtro-data" />
 
+                    <button id="btn-limpar-filtros" class="btn-secundario" type="button">Limpar filtros</button>
+                </div>
 
-            <select id="filtro-status">
+                <div class="grupo-acoes">
+                    <input type="file" id="arquivo-excel" class="visualmente-oculto" accept=".xlsx" tabindex="-1" />
 
-                <option value="">
-                    Todos os status
-                </option>
+                    <button id="btn-importar" class="btn-principal" type="button">Importar / Atualizar Planilha</button>
 
-                <option value="CARREGADO">
-                    Carregado
-                </option>
+                    <button id="btn-exportar" class="btn-secundario" type="button">Exportar CSV</button>
 
-                <option value="DENTRO DO PRAZO">
-                    Dentro do prazo
-                </option>
+                    <button id="btn-limpar-dados" class="btn-perigo" type="button">Limpar dados</button>
+                </div>
+            </section>
 
-                <option value="ATRASADO">
-                    Atrasado
-                </option>
+            <!-- ====================================== -->
+            <!-- GRÁFICOS -->
+            <!-- ====================================== -->
 
-            </select>
-
-
-            <input
-                type="date"
-                id="filtro-data"
-            >
-
-
-            <input
-                type="file"
-                id="arquivo-excel"
-                accept=".xlsx"
-            >
-
-
-            <button id="btn-importar">
-                Importar / Atualizar Planilha
-            </button>
-
-        </section>
-
-
-        <!-- ====================================== -->
-        <!-- GRÁFICOS -->
-        <!-- ====================================== -->
-
-        <section class="graficos">
-
-            <div class="grafico-card">
-
-                <div class="titulo-grafico">
-
-                    <div>
+            <section class="graficos">
+                <div class="grafico-card">
+                    <div class="titulo-grafico">
                         <h3>Status das Cargas</h3>
                         <p>Distribuição das cargas por situação</p>
                     </div>
 
+                    <div class="grafico-area">
+                        <canvas
+                            id="grafico-status"
+                            role="img"
+                            aria-label="Gráfico de distribuição das cargas por status"
+                        ></canvas>
+                    </div>
                 </div>
 
-                <div class="grafico-area">
-                    <canvas id="grafico-status"></canvas>
-                </div>
-
-            </div>
-
-
-            <div class="grafico-card">
-
-                <div class="titulo-grafico">
-
-                    <div>
+                <div class="grafico-card">
+                    <div class="titulo-grafico">
                         <h3>Cargas por Transportadora</h3>
                         <p>Quantidade de cargas por operação</p>
                     </div>
 
+                    <div class="grafico-area">
+                        <canvas
+                            id="grafico-transportadora"
+                            role="img"
+                            aria-label="Gráfico da quantidade de cargas por transportadora"
+                        ></canvas>
+                    </div>
                 </div>
-
-                <div class="grafico-area">
-                    <canvas id="grafico-transportadora"></canvas>
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- ====================================== -->
-        <!-- TABELA -->
-        <!-- ====================================== -->
-
-        <section class="tabela-container">
-
-            <div class="tabela-titulo">
-
-                <div>
-                    <h3>Lista de Cargas</h3>
-                    <p>Clique em uma carga para visualizar os detalhes</p>
-                </div>
-
-            </div>
-
-
-            <div class="tabela-scroll">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-                            <th>OC</th>
-                            <th>Rota</th>
-                            <th>Transportadora</th>
-                            <th>Status</th>
-                            <th>GR</th>
-                            <th>Venda</th>
-                            <th>Doca</th>
-                            <th>Peso</th>
-                            <th>Data</th>
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody id="tabela-cargas">
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </section>
-
-    </main>
-
-
-    <!-- ====================================== -->
-    <!-- MODAL -->
-    <!-- ====================================== -->
-
-    <div
-        id="modal-detalhes"
-        class="modal"
-    >
-
-        <div class="modal-conteudo">
-
-            <div class="modal-topo">
-
-                <div>
-
-                    <h2>Detalhes da Carga</h2>
-
-                    <p>
-                        OC:
-                        <strong id="modal-oc"></strong>
-                    </p>
-
-                </div>
-
-
-                <button
-                    id="btn-fechar-modal"
-                    class="btn-fechar"
-                    type="button"
-                >
-                    ×
-                </button>
-
-            </div>
-
-
-            <div class="detalhes-grid">
-
-                <div class="campo-detalhe">
-
-                    <label>Rota</label>
-
-                    <input
-                        type="text"
-                        id="modal-rota"
-                        disabled
-                    >
-
-                </div>
-
-
-                <div class="campo-detalhe">
-
-                    <label>Transportadora</label>
-
-                    <input
-                        type="text"
-                        id="modal-transportadora"
-                        disabled
-                    >
-
-                </div>
-
-
-                <div class="campo-detalhe">
-
-                    <label>Status</label>
-
-                    <select id="modal-status">
-
-                        <option value="CARREGADO">
-                            Carregado
-                        </option>
-
-                        <option value="DENTRO DO PRAZO">
-                            Dentro do prazo
-                        </option>
-
-                        <option value="ATRASADO">
-                            Atrasado
-                        </option>
-
-                    </select>
-
-                </div>
-
-
-                <div class="campo-detalhe">
-
-                    <label>Doca</label>
-
-                    <input
-                        type="number"
-                        id="modal-doca"
-                    >
-
-                </div>
-
-
-                <div class="campo-detalhe">
-
-                    <label>GR</label>
-
-                    <input
-                        type="text"
-                        id="modal-gr"
-                        disabled
-                    >
-
-                </div>
-
-
-                <div class="campo-detalhe">
-
-                    <label>Data</label>
-
-                    <input
-                        type="text"
-                        id="modal-data"
-                        disabled
-                    >
-
-                </div>
-
-
-                <div class="campo-detalhe">
-
-                    <label>Peso</label>
-
-                    <input
-                        type="text"
-                        id="modal-peso"
-                        disabled
-                    >
-
-                </div>
-
-
-                <div class="campo-detalhe">
-
-                    <label>Venda</label>
-
-                    <input
-                        type="text"
-                        id="modal-venda"
-                        disabled
-                    >
-
-                </div>
-
-            </div>
-
-
-            <div class="campo-observacao">
-
-                <label>Observação</label>
-
-                <textarea
-                    id="modal-observacao"
-                    placeholder="Digite uma observação sobre esta carga..."
-                ></textarea>
-
-            </div>
-
-
-            <!-- HISTÓRICO -->
-
-            <div class="historico-container">
-
-                <div class="historico-titulo">
-
-                    <h3>Histórico da OC</h3>
-
-                    <span id="historico-quantidade">
-                        0 alterações
-                    </span>
-
-                </div>
-
-
-                <div
-                    id="lista-historico"
-                    class="lista-historico"
-                >
-
-                    <div class="historico-vazio">
-                        Nenhuma alteração registrada.
+            </section>
+
+            <!-- ====================================== -->
+            <!-- TABELA -->
+            <!-- ====================================== -->
+
+            <section class="tabela-container">
+                <div class="tabela-titulo">
+                    <div>
+                        <h3>Lista de Cargas</h3>
+                        <p>Clique em uma carga (ou use Enter) para visualizar os detalhes</p>
                     </div>
 
+                    <span id="tabela-contador" class="tabela-contador" aria-live="polite"></span>
                 </div>
 
+                <div class="tabela-scroll">
+                    <table>
+                        <caption class="visualmente-oculto">
+                            Lista de cargas
+                        </caption>
+
+                        <thead>
+                            <tr>
+                                <th scope="col" data-campo="oc">
+                                    <button type="button" class="btn-ordenar">OC</button>
+                                </th>
+                                <th scope="col" data-campo="rota">
+                                    <button type="button" class="btn-ordenar">Rota</button>
+                                </th>
+                                <th scope="col" data-campo="transportadora">
+                                    <button type="button" class="btn-ordenar">Transportadora</button>
+                                </th>
+                                <th scope="col" data-campo="status">
+                                    <button type="button" class="btn-ordenar">Status</button>
+                                </th>
+                                <th scope="col" data-campo="gr">
+                                    <button type="button" class="btn-ordenar">GR</button>
+                                </th>
+                                <th scope="col" data-campo="venda">
+                                    <button type="button" class="btn-ordenar">Venda</button>
+                                </th>
+                                <th scope="col" data-campo="doca">
+                                    <button type="button" class="btn-ordenar">Doca</button>
+                                </th>
+                                <th scope="col" data-campo="peso">
+                                    <button type="button" class="btn-ordenar">Peso</button>
+                                </th>
+                                <th scope="col" data-campo="data">
+                                    <button type="button" class="btn-ordenar">Data</button>
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="tabela-cargas"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- ====================================== -->
+        <!-- MODAL -->
+        <!-- ====================================== -->
+
+        <div id="modal-detalhes" class="modal" aria-hidden="true">
+            <div class="modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+                <div class="modal-topo">
+                    <div>
+                        <h2 id="modal-titulo">Detalhes da Carga</h2>
+
+                        <p>
+                            OC:
+                            <strong id="modal-oc"></strong>
+                        </p>
+                    </div>
+
+                    <button id="btn-fechar-modal" class="btn-fechar" type="button" aria-label="Fechar">×</button>
+                </div>
+
+                <div class="detalhes-grid">
+                    <div class="campo-detalhe">
+                        <label for="modal-rota">Rota</label>
+                        <input type="text" id="modal-rota" disabled />
+                    </div>
+
+                    <div class="campo-detalhe">
+                        <label for="modal-transportadora">Transportadora</label>
+                        <input type="text" id="modal-transportadora" disabled />
+                    </div>
+
+                    <div class="campo-detalhe">
+                        <label for="modal-status">Status</label>
+                        <select id="modal-status">
+                            <option value="CARREGADO">Carregado</option>
+                            <option value="DENTRO DO PRAZO">Dentro do prazo</option>
+                            <option value="ATRASADO">Atrasado</option>
+                            <option value="">Sem status</option>
+                        </select>
+                        <small id="modal-status-origem" class="origem-campo"></small>
+                    </div>
+
+                    <div class="campo-detalhe">
+                        <label for="modal-doca">Doca</label>
+                        <input type="text" id="modal-doca" maxlength="20" autocomplete="off" />
+                        <small id="modal-doca-origem" class="origem-campo"></small>
+                    </div>
+
+                    <div class="campo-detalhe">
+                        <label for="modal-gr">GR</label>
+                        <input type="text" id="modal-gr" disabled />
+                    </div>
+
+                    <div class="campo-detalhe">
+                        <label for="modal-data">Data</label>
+                        <input type="text" id="modal-data" disabled />
+                    </div>
+
+                    <div class="campo-detalhe">
+                        <label for="modal-peso">Peso</label>
+                        <input type="text" id="modal-peso" disabled />
+                    </div>
+
+                    <div class="campo-detalhe">
+                        <label for="modal-venda">Venda</label>
+                        <input type="text" id="modal-venda" disabled />
+                    </div>
+                </div>
+
+                <div class="campo-observacao">
+                    <label for="modal-observacao">Observação</label>
+
+                    <textarea
+                        id="modal-observacao"
+                        maxlength="1000"
+                        placeholder="Digite uma observação sobre esta carga..."
+                    ></textarea>
+                </div>
+
+                <!-- HISTÓRICO -->
+
+                <div class="historico-container">
+                    <div class="historico-titulo">
+                        <h3>Histórico da OC</h3>
+
+                        <span id="historico-quantidade">0 alterações</span>
+                    </div>
+
+                    <div id="lista-historico" class="lista-historico">
+                        <div class="historico-vazio">Nenhuma alteração registrada.</div>
+                    </div>
+                </div>
+
+                <div class="modal-acoes">
+                    <button id="btn-restaurar" class="btn-secundario btn-restaurar" type="button">
+                        Restaurar dados da planilha
+                    </button>
+
+                    <button id="btn-cancelar" class="btn-secundario" type="button">Cancelar</button>
+
+                    <button id="btn-salvar" class="btn-principal" type="button">Salvar Alterações</button>
+                </div>
             </div>
-
-
-            <div class="modal-acoes">
-
-                <button
-                    id="btn-cancelar"
-                    class="btn-secundario"
-                    type="button"
-                >
-                    Cancelar
-                </button>
-
-
-                <button
-                    id="btn-salvar"
-                    class="btn-salvar"
-                    type="button"
-                >
-                    Salvar Alterações
-                </button>
-
-            </div>
-
         </div>
 
-    </div>
+        <!-- AVISOS -->
 
+        <div id="avisos" class="avisos" aria-live="polite"></div>
 
-    <!-- EXCEL -->
+        <!-- EXCEL -->
 
-    <script
-        src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js">
-    </script>
+        <script
+            src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"
+            integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz"
+            crossorigin="anonymous"
+        ></script>
 
+        <!-- GRÁFICOS -->
 
-    <!-- GRÁFICOS -->
+        <script
+            src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+            integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
+            crossorigin="anonymous"
+        ></script>
 
-    <script
-        src="https://cdn.jsdelivr.net/npm/chart.js">
-    </script>
+        <!-- NOSSO JAVASCRIPT -->
 
-
-    <!-- NOSSO JAVASCRIPT -->
-
-    <script src="script.js"></script>
-
-</body>
-
+        <script src="utils.js"></script>
+        <script src="script.js"></script>
+    </body>
 </html>
