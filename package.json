@@ -3,6 +3,7 @@
     "version": "1.1.0",
     "description": "Dashboard web para acompanhamento operacional de cargas a partir de planilhas Excel.",
     "private": true,
+    "license": "MIT",
     "scripts": {
         "test": "node --test"
     },
