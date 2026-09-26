@@ -1,0 +1,23 @@
+name: Testes
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+jobs:
+    testes:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+
+            - name: Verificar formatação
+              run: npx --yes prettier@3.9.9 --check "**/*.{js,html,css,json}"
+
+            - name: Rodar testes
+              run: npm test

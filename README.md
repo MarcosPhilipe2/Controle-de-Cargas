@@ -1,10 +1,14 @@
 # 🚚 Controle de Cargas
 
+[![Testes](https://github.com/MarcosPhilipe2/Controle-de-Cargas/actions/workflows/testes.yml/badge.svg)](https://github.com/MarcosPhilipe2/Controle-de-Cargas/actions/workflows/testes.yml)
+
 Dashboard web para **acompanhamento operacional de cargas**, desenvolvido com HTML, CSS e JavaScript a partir de um cenário prático de logística.
 
 A aplicação transforma dados de uma planilha Excel em informações visuais para facilitar o acompanhamento da operação, reunindo **KPIs, filtros, gráficos, status, detalhes das cargas e histórico de alterações** em uma única interface.
 
 > ⚠️ Todos os dados utilizados no projeto são fictícios e destinados exclusivamente a estudo, demonstração técnica e portfólio.
+
+![Painel do Controle de Cargas](docs/dashboard.png)
 
 ## 🎯 Objetivo
 
@@ -14,24 +18,25 @@ A proposta é centralizar informações de carregamento e permitir uma leitura r
 
 ## ✨ Funcionalidades
 
-- Importação de arquivos `.xlsx`
-- Leitura dos dados com ExcelJS
-- Identificação automática do status pela cor da célula da planilha
-- Pesquisa por OC
-- Filtro por transportadora
-- Filtro por status
-- Filtro por data
-- KPIs atualizados a partir dos dados carregados
-- Gráfico de distribuição por status
-- Gráfico de cargas por transportadora
-- Tabela operacional de cargas
+- Importação de arquivos `.xlsx` (a importação começa ao escolher o arquivo)
+- Leitura dos dados com ExcelJS, incluindo células com **fórmulas, hiperlinks e texto formatado**
+- Colunas localizadas **pelo nome do cabeçalho**, em qualquer ordem
+- Identificação automática do status pela cor da célula (ou por uma coluna `Status` em texto)
+- Pesquisa por OC e filtros por transportadora, status (incluindo **Sem status**) e data
+- KPIs e gráficos atualizados conforme os filtros
+- Tabela com **ordenação** por qualquer coluna
 - Visualização detalhada de cada OC
-- Alteração manual de status
-- Alteração de doca
-- Registro de observações
+- Alteração manual de status, doca e observações
+- Indicação de quando um campo foi **alterado manualmente** e botão para **restaurar os dados da planilha**
 - Histórico de alterações por OC
-- Persistência local das cargas e alterações no navegador
-- Atualização da planilha sem perder alterações manuais já registradas
+- Atualização da planilha sem perder alterações manuais, com resumo de cargas novas, atualizadas, removidas e duplicadas
+- **Exportação para CSV** das cargas filtradas (abre direto no Excel)
+- Botão para limpar os dados salvos no navegador
+- Persistência local no navegador
+- Acessível por teclado (Tab, Enter e Esc) e compatível com leitores de tela
+- Layout responsivo (computador, tablet e celular)
+
+![Detalhes de uma carga](docs/detalhes.png)
 
 ## 📊 Indicadores
 
@@ -44,17 +49,45 @@ O painel apresenta:
 - **Peso total**
 - **Valor total das vendas**
 
-## 🚦 Regras visuais de status
+## 📄 Formato da planilha
 
-O sistema interpreta as cores da planilha e converte cada carga para um status operacional:
+Há uma planilha pronta para teste em [`exemplo/cargas-exemplo.xlsx`](exemplo/cargas-exemplo.xlsx).
 
-| Cor na planilha | Status |
-| --- | --- |
-| 🟢 Verde | Carregado |
-| 🟡 Amarelo | Dentro do prazo |
-| 🔴 Vermelho | Atrasado |
+A primeira aba é lida e a **linha 1 deve conter o cabeçalho**. As colunas são reconhecidas pelo nome (sem diferenciar maiúsculas e acentos), em qualquer ordem:
 
-Essa regra transforma uma sinalização visual existente na planilha em informação estruturada para filtros, indicadores e gráficos.
+| Campo          | Nomes aceitos no cabeçalho                       | Observação                            |
+| -------------- | ------------------------------------------------ | ------------------------------------- |
+| OC             | `OC`, `Ordem de Carga`, `Ordem`                  | Obrigatória; linhas sem OC são ignoradas |
+| Rota           | `Rota`                                           |                                       |
+| Transportadora | `Transportadora`, `Transp`, `Transporte`         |                                       |
+| GR             | `GR`                                             |                                       |
+| Venda          | `Venda`, `Valor`, `Valor Venda`, `Valor da Venda` | Aceita número, fórmula ou texto `1.234,56` |
+| Doca           | `Doca`                                           | Aceita letras (ex.: `A2`)             |
+| Peso           | `Peso`, `Peso KG`, `Peso (kg)`                   |                                       |
+| Data           | `Data`, `Data Carregamento`, `Data de Carregamento` | Data do Excel ou texto `dd/mm/aaaa`  |
+| Status         | `Status`, `Situação`                             | Opcional; tem prioridade sobre a cor  |
+
+Se nenhuma coluna `OC` for encontrada no cabeçalho, é usado o layout fixo: **A** OC · **B** Rota · **C** Transportadora · **D** GR · **E** Venda · **F** Doca · **G** Peso · **H** Data.
+
+## 🚦 Regras de status
+
+O sistema interpreta a cor de preenchimento da célula da OC (ou, se ela não tiver cor, de outra célula da linha) e converte cada carga para um status operacional:
+
+| Cor na planilha | Status          |
+| --------------- | --------------- |
+| 🟢 Verde        | Carregado       |
+| 🟡 Amarelo      | Dentro do prazo |
+| 🔴 Vermelho     | Atrasado        |
+
+Além das cores padrão do Excel (`00B050`, `FFFF00`, `FF0000`), tons próximos também são reconhecidos. Cores não reconhecidas resultam em **Sem status**, e a quantidade aparece no resumo da importação.
+
+> Cores aplicadas por **formatação condicional** ou por **cores do tema** do Excel não ficam gravadas na célula e, por isso, não podem ser lidas. Nesses casos, use uma coluna `Status` em texto.
+
+### Alterações manuais x planilha
+
+- Alterações manuais de status e doca são mantidas quando a mesma planilha é importada novamente.
+- Se a **planilha mudar** o valor de um campo que tinha alteração manual, **o valor novo da planilha prevalece**, e a mudança fica registrada no histórico da OC.
+- Observações nunca são sobrescritas pela planilha.
 
 ## 🧠 Fluxo da aplicação
 
@@ -63,7 +96,7 @@ Planilha Excel (.xlsx)
         ↓
       ExcelJS
         ↓
-Leitura e tratamento dos dados
+Leitura e tratamento dos dados (utils.js)
         ↓
      JavaScript
         ↓
@@ -80,52 +113,63 @@ KPIs  Gráficos   Tabela
 
 ## 🛠️ Tecnologias
 
-- **HTML5** — estrutura da aplicação
-- **CSS3** — layout e identidade visual
-- **JavaScript** — regras, filtros, indicadores e interações
-- **ExcelJS** — leitura da planilha Excel
-- **Chart.js** — geração dos gráficos
-- **LocalStorage** — persistência local no navegador
-- **Git / GitHub** — versionamento
+- **HTML5**: estrutura da aplicação
+- **CSS3**: layout e identidade visual
+- **JavaScript**: regras, filtros, indicadores e interações
+- **ExcelJS 4.4**: leitura da planilha Excel
+- **Chart.js 4.5**: geração dos gráficos
+- **LocalStorage**: persistência local no navegador
+- **Node.js (`node:test`)**: testes automatizados
+- **Prettier**: padronização do código
+- **GitHub Actions**: testes a cada envio
+- **Git / GitHub**: versionamento
+
+As bibliotecas são carregadas por CDN com **versão fixa e verificação de integridade (SRI)**.
 
 ## 📂 Estrutura
 
 ```text
 Controle-de-Cargas/
-├── index.html
-├── style.css
-├── script.js
-└── README.md
+├── index.html              # Estrutura: KPIs, filtros, gráficos, tabela e modal
+├── style.css               # Layout responsivo, cores, tabela, modal e avisos
+├── utils.js                # Regras de negócio (sem dependência da tela)
+├── script.js               # Interface: eventos, renderização e persistência
+├── exemplo/
+│   └── cargas-exemplo.xlsx # Planilha fictícia para teste
+├── docs/                   # Imagens do README
+├── tests/
+│   └── utils.test.js       # Testes das regras de negócio
+└── package.json
 ```
 
-### `index.html`
-
-Estrutura os KPIs, filtros, gráficos, tabela de cargas e modal de detalhes.
-
-### `script.js`
-
-Concentra a leitura da planilha, tratamento dos dados, filtros, gráficos, persistência, histórico e regras de negócio da interface.
-
-### `style.css`
-
-Define o layout responsivo, cores, cards, tabela, modal e estilos dos diferentes status.
+`utils.js` concentra as regras (conversão de valores, datas, status por cor, mapeamento de colunas, mesclagem da importação, filtros, ordenação, indicadores e CSV). Por não depender do navegador, é testado diretamente no Node.
 
 ## ▶️ Como executar
 
-Este é um projeto front-end e não exige instalação de dependências locais.
-
-Clone o repositório:
+Este é um projeto front-end e não exige instalação de dependências.
 
 ```bash
 git clone https://github.com/MarcosPhilipe2/Controle-de-Cargas.git
 cd Controle-de-Cargas
 ```
 
-Depois, abra o arquivo `index.html` no navegador.
+Depois, abra o arquivo `index.html` no navegador e importe a planilha `exemplo/cargas-exemplo.xlsx`.
 
-Para utilizar o dashboard com dados, importe uma planilha `.xlsx` compatível com a estrutura esperada pelo projeto.
+É necessário acesso à internet para carregar ExcelJS e Chart.js pela CDN.
 
-As bibliotecas ExcelJS e Chart.js são carregadas via CDN, portanto é necessário acesso à internet para utilizá-las dessa forma.
+### Publicar no GitHub Pages
+
+Em **Settings → Pages**, selecione a branch `main` e a pasta `/ (root)`. O painel ficará disponível em `https://marcosphilipe2.github.io/Controle-de-Cargas/`.
+
+## 🧪 Testes
+
+Requer Node.js 18 ou superior:
+
+```bash
+npm test
+```
+
+Os testes cobrem leitura de células (fórmulas, hiperlinks e texto formatado), conversão de números e datas (incluindo o fuso horário), reconhecimento de cores, mapeamento de colunas, mesclagem da importação com alterações manuais, filtros, ordenação, indicadores e exportação CSV.
 
 ## 💾 Persistência
 
@@ -135,7 +179,7 @@ O projeto utiliza o `localStorage` do navegador para manter:
 - alterações manuais;
 - histórico por OC.
 
-Isso permite atualizar a página sem precisar importar novamente a planilha em todas as utilizações no mesmo navegador.
+Isso permite atualizar a página sem precisar importar novamente a planilha em todas as utilizações no mesmo navegador. O botão **Limpar dados** remove tudo.
 
 > O `localStorage` é adequado para este protótipo, mas não substitui um banco de dados em uma aplicação multiusuário.
 
@@ -175,9 +219,12 @@ Entre os conceitos aplicados estão:
 
 - manipulação de dados;
 - leitura de arquivos Excel;
-- regras de negócio;
+- regras de negócio separadas da interface;
+- testes automatizados e integração contínua;
+- segurança (prevenção de XSS e de injeção de fórmulas no CSV);
+- acessibilidade;
 - persistência no navegador;
-- filtros e busca;
+- filtros, busca e ordenação;
 - construção de dashboards;
 - visualização de indicadores;
 - organização de informações operacionais;
