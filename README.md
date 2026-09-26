@@ -1,6 +1,7 @@
 # 🚚 Controle de Cargas
 
 [![Testes](https://github.com/MarcosPhilipe2/Controle-de-Cargas/actions/workflows/testes.yml/badge.svg)](https://github.com/MarcosPhilipe2/Controle-de-Cargas/actions/workflows/testes.yml)
+[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 
 Dashboard web para **acompanhamento operacional de cargas**, desenvolvido com HTML, CSS e JavaScript a partir de um cenário prático de logística.
 
@@ -235,3 +236,7 @@ Entre os conceitos aplicados estão:
 **Marcos Philipe Tavares**
 
 Projeto desenvolvido como parte do meu portfólio em Tecnologia, Dados e Automação, aplicando desenvolvimento web a um cenário de operação logística.
+
+## 📄 Licença
+
+Distribuído sob a licença MIT. Veja o arquivo [`LICENSE`](LICENSE) para mais detalhes.
